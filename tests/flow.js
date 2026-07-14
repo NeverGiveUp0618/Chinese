@@ -23,6 +23,7 @@ const ok = (c, m) => { c ? pass++ : fail++; console.log(`  ${c ? "✓" : "✗ FA
 
   console.log("— 营地（首页）—");
   ok($("#scr-home").classList.contains("on"), "首页显示");
+  ok($("#hubLink").href === "https://nevergiveup0618.github.io/learning/", "★ 最顶部可直接返回学习导航页");
   ok($("#buddyE").textContent === "🦡", "搭档小獾在");
   ok($("#scr-home").innerHTML.includes("今日探险"), "今日探险任务卡");
   ok($$(".tab").length === 5, "5个导航（营地/寻宝/脑洞/法宝/宝库）");
