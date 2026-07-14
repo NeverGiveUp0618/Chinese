@@ -26,6 +26,7 @@ function defState() {
     stops: {},      // stopId -> {read:bool, done:[questIdx], stars:{questIdx:n}}
     tools: {},      // toolId -> {learned:bool, used:n, best:0}
     gems: [],       // 宝库：{txt, tool, from, d}
+    remixes: [],    // 宝物变身记录：{from,tool,d,hit}，只记是否用了技巧，不评好坏
     essays: {},     // essayId -> {paras:[], done:bool, score:0}
     checkins: {},
     testMode: false // 家长测试模式：全部解锁，给孩子用前记得关掉
@@ -127,10 +128,19 @@ $$(".tab").forEach(t => {
 /* ---------------- 进度 ---------------- */
 function stopS(id) { if (!S.stops[id]) S.stops[id] = { read: false, done: [], stars: {} }; return S.stops[id]; }
 function toolS(id) { if (!S.tools[id]) S.tools[id] = { learned: false, used: 0, best: 0 }; return S.tools[id]; }
+const ROUTES = [
+  { id: "wonder", icon: "⛰️", name: "山河奇境线", sub: "山水、海岛和自然奇观", stops: ["guilin", "xiamen", "chengdu", "lhasa", "sanya", "guangzhou"] },
+  { id: "history", icon: "🏯", name: "古都时光线", sub: "穿过城墙，和古人碰面", stops: ["beijing", "xian", "luoyang", "kaifeng", "nanjing"] },
+  { id: "craft", icon: "🎨", name: "匠心风物线", sub: "壁画、园林、建筑和冰雪", stops: ["dunhuang", "shanghai", "hangzhou", "harbin", "suzhou"] }
+];
+function routeOf(stopId) { return ROUTES.find(r => r.stops.includes(stopId)); }
 function stopUnlocked(i) {
   if (S.testMode) return true;                // 测试模式：全部解锁
-  if (i === 0) return true;
-  const prev = STOPS[i - 1];
+  const stop = STOPS[i], route = routeOf(stop.id);
+  if (!route) return i === 0;
+  const ri = route.stops.indexOf(stop.id);
+  if (ri === 0) return true;                  // 三条路线都能自己选，不强迫走唯一顺序
+  const prev = STOPS.find(s => s.id === route.stops[ri - 1]);
   return stopS(prev.id).done.length >= 2;     // 上一站做完 2 个任务就开下一站
 }
 function totalQuests() { return STOPS.reduce((a, s) => a + s.quests.length, 0); }
@@ -195,7 +205,7 @@ function renderHome() {
       <div class="card" id="goIdea"><div class="hIcon">💡</div><div class="hName">脑洞任务</div><div class="hSub">随便写，没有对错</div></div>
       <div class="card" id="goGems"><div class="hIcon">💎</div><div class="hName">我的宝库</div><div class="hSub">${S.gems.length} 件宝物</div></div>
       <div class="card" id="goTools"><div class="hIcon">🧰</div><div class="hName">六件法宝</div><div class="hSub">已学会 ${learned}/6</div></div>
-      <div class="card" id="goEssay"><div class="hIcon">✍️</div><div class="hName">周末作文</div><div class="hSub">脚手架帮你写</div></div>
+      <div class="card ${S.gems.length >= 2 ? "transferReady" : ""}" id="goEssay"><div class="hIcon">✍️</div><div class="hName">把宝物写成作文</div><div class="hSub">${S.gems.length ? `带 ${S.gems.length} 句自己的素材去写` : "先寻宝，周末再来组装"}</div></div>
     </div>
     <div style="height:10px"></div>
     <div style="text-align:center;font-size:11px;color:#b0997a;padding:8px" id="parentLink">家长设置</div>`;
@@ -222,25 +232,37 @@ function renderHome() {
 function renderMap() {
   $("#scr-map").innerHTML = `
     <div class="card" style="text-align:center;padding:12px">
-      <div style="font-size:15px;font-weight:800;color:#8a6a2a">🗺️ 中华寻宝地图</div>
+      <div style="font-size:15px;font-weight:800;color:#8a6a2a">🧭 中华寻宝 · 卡通探险路线</div>
       <div style="font-size:12px;color:#b0997a;margin-top:2px">已完成 ${doneQuests()}/${totalQuests()} 个寻宝任务</div>
+      <div style="font-size:10px;color:#b9aa94;margin-top:4px">游戏路线图 · 非地理比例地图</div>
     </div>
-    ${STOPS.map((s, i) => {
+    <div style="font-size:12px;color:#8a6a2a;text-align:center;margin:4px 0 10px">三条路线任选一条，今天想去哪儿由你决定</div>
+    ${ROUTES.map(route => `<div class="routeChapter" data-route="${route.id}">
+      <div class="routeTitle"><span>${route.icon}</span><span>${route.name}<small>${route.sub}</small></span></div>
+      <div class="adventureMap">
+      <div class="mapScenery"><span>🌲</span><span>☁️</span><span>🎁</span></div>
+      ${route.stops.map((id, ri) => {
+      const i = STOPS.findIndex(x => x.id === id), s = STOPS[i];
       const st = stopS(s.id), open = stopUnlocked(i);
       const n = st.done.length, tot = s.quests.length;
-      return `<div class="card stopCard ${open ? "" : "locked"}" data-i="${i}">
-        <div class="stopIcon">${open ? s.icon : "🔒"}</div>
-        <div class="stopInfo">
-          <div class="stopName">${s.name}<span style="font-size:12px;color:#b0997a;font-weight:400">　${s.region}</span></div>
-          <div class="stopSub">${open ? (n === tot ? "✅ 全部完成" : "寻宝任务 " + n + "/" + tot) : "完成上一站的 2 个任务即可解锁"}</div>
+      return `<div class="routeStop ${ri % 2 ? "right" : "left"} ${open ? "" : "locked"} ${n === tot ? "done" : ""}">
+        <span class="routeDot"></span>
+        <div class="card stopCard ${open ? "" : "locked"}" data-i="${i}">
+          <div class="stopIcon">${open ? s.icon : "🔒"}</div>
+          <div class="stopInfo">
+            <div class="stopName">${s.name}<span style="font-size:11px;color:#b0997a;font-weight:400">　${s.region}</span></div>
+            <div class="stopSub">${open ? (n === tot ? "✅ 全部完成" : "寻宝任务 " + n + "/" + tot) : "上一站完成 2 题解锁"}</div>
+            <div class="stopStars">${"★".repeat(n)}${"☆".repeat(tot - n)}</div>
+          </div>
         </div>
-        <div class="stopStars">${"★".repeat(n)}${"☆".repeat(tot - n)}</div>
       </div>`;
-    }).join("")}`;
+    }).join("")}
+      <div class="mapScenery"><span>🧭</span><span>✨</span><span>${route.icon}</span></div>
+    </div></div>`).join("")}`;
   $$("#scr-map .stopCard").forEach(c => {
     c.onclick = () => {
       const i = +c.dataset.i;
-      if (!stopUnlocked(i)) { toast("先在上一站完成 2 个寻宝任务～"); return; }
+      if (!stopUnlocked(i)) { toast("先在这条路线的上一站完成 2 个寻宝任务～"); return; }
       go(() => renderStop(STOPS[i]));
     };
   });
@@ -287,24 +309,74 @@ function renderStop(stop) {
   show("stop", stop.name);
 }
 
-/* 知识卡：她本来就爱看这个，零门槛 */
+/* 知识卡：一张一张看，马上找关键线索。不是看完一大页才回应。 */
+function cardClue(card) {
+  const m = card.d.match(/<b>([\s\S]*?)<\/b>/);
+  return (m ? m[1] : card.d).replace(/<[^>]+>/g, "");
+}
 function renderCards(stop) {
   const st = stopS(stop.id);
-  st.read = true; save();
-  $("#scr-cards").innerHTML = `
-    <div class="card" style="text-align:center;padding:12px">
-      <div style="font-size:15px;font-weight:800;color:#8a6a2a">${stop.icon} ${stop.name}的秘密</div>
-      <div style="font-size:12px;color:#b0997a;margin-top:2px">看完再去写，你会有一堆东西可写</div>
-    </div>
-    ${stop.cards.map(c => `
-      <div class="kcard">
-        <span class="ke">${c.e}</span>
-        <div class="kt">${esc(c.t)}</div>
-        <div class="kd">${c.d}</div>
-      </div>`).join("")}
-    <div style="height:6px"></div>
-    <button class="btn" id="cardsGo">🔍 去做寻宝任务</button>`;
-  $("#cardsGo").onclick = goBack;
+  let ci = 0, hits = 0;
+  function shell(body) {
+    $("#scr-cards").innerHTML = `
+      <div class="card" style="text-align:center;padding:12px">
+        <div style="font-size:15px;font-weight:800;color:#8a6a2a">${stop.icon} ${stop.name}的秘密</div>
+        <div style="font-size:12px;color:#b0997a;margin-top:2px">读一张，马上找线索 · ${Math.min(ci + 1, stop.cards.length)}/${stop.cards.length}</div>
+      </div>${body}`;
+  }
+  function cover() {
+    if (ci >= stop.cards.length) return finish();
+    const c = stop.cards[ci];
+    shell(`<div class="kcard clueCover" style="text-align:center;padding:24px 16px">
+      <div style="font-size:52px">${c.e}</div>
+      <div class="kt" style="font-size:18px;margin-top:8px">${esc(c.t)}</div>
+      <div style="font-size:12px;color:#b0997a;margin:6px 0 14px">小獾找到一张线索卡，翻开看看！</div>
+      <button class="btn" id="cardOpen">翻开线索 👀</button>
+    </div>`);
+    $("#cardOpen").onclick = reveal;
+  }
+  function reveal() {
+    const c = stop.cards[ci];
+    shell(`<div class="kcard clueOpen">
+      <span class="ke">${c.e}</span><div class="kt">${esc(c.t)}</div><div class="kd">${c.d}</div>
+    </div><button class="btn" id="clueReady">我找到关键线索了 →</button>`);
+    $("#clueReady").onclick = quiz;
+  }
+  function quiz() {
+    const c = stop.cards[ci], answer = cardClue(c);
+    const others = shuffle(stop.cards.filter(x => x !== c).map(cardClue)).slice(0, 2);
+    const opts = shuffle([answer].concat(others));
+    shell(`<div class="card" style="text-align:center;padding:14px">
+      <div style="font-size:30px">🕵️</div>
+      <div style="font-size:15px;font-weight:800;color:#7a5a2a">刚才最关键的线索是哪一句？</div>
+      <div style="font-size:12px;color:#b0997a;margin-top:3px">选错也没关系，小獾会马上告诉你</div>
+    </div><div class="clueOpts">${opts.map((o, i) => `<button class="clueOpt" data-i="${i}">${esc(o)}</button>`).join("")}</div>`);
+    let locked = false;
+    $$("#scr-cards .clueOpt").forEach(b => b.onclick = () => {
+      if (locked) return; locked = true;
+      const picked = opts[+b.dataset.i];
+      if (picked === answer) { b.classList.add("right"); hits++; sndCoin(); toast("🔎 找到了！这就是关键线索", 1200); }
+      else {
+        b.classList.add("wrong");
+        $$("#scr-cards .clueOpt").forEach(x => { if (opts[+x.dataset.i] === answer) x.classList.add("right"); });
+        toast("没关系，亮起来的那句就是线索～", 1400);
+      }
+      setTimeout(() => { ci++; cover(); }, 900);
+    });
+  }
+  function finish() {
+    st.read = true; save(); sndWin();
+    shell(`<div class="card" style="text-align:center;padding:24px 16px">
+      <div style="font-size:56px">🎒✨</div>
+      <div style="font-size:19px;font-weight:800;color:#6a9a4a">4 条线索装进背包啦！</div>
+      <div style="font-size:13px;color:#6a5a42;margin:7px 0 16px">你找对了 ${hits}/${stop.cards.length} 条。写的时候想不起来，随时回来翻卡。</div>
+      <button class="btn" id="cardsGo">🔍 带着线索去写</button>
+      <div style="height:8px"></div><button class="btn ghost" id="cardsAgain">再翻一遍 🔁</button>
+    </div>`);
+    $("#cardsGo").onclick = goBack;
+    $("#cardsAgain").onclick = () => { ci = 0; hits = 0; cover(); };
+  }
+  cover();
   show("cards", "📚 " + stop.name);
 }
 
@@ -513,6 +585,9 @@ function renderGems() {
       <div style="font-size:15px;font-weight:800;color:#8a6a2a">💎 我的宝库（${gs.length} 件）</div>
       <div style="font-size:12px;color:#b0997a;margin-top:2px">这些都是<b>你自己写的</b>。写作文时直接从这里拿来用！</div>
     </div>
+    ${gs.length ? `<div class="card remixCall" id="goRemix">
+      <span style="font-size:34px">🔄</span><span style="flex:1"><b>宝物变身挑战</b><small>选一句自己写的，换一种法宝再写一次</small></span><span>▶</span>
+    </div>` : ""}
     ${gs.length ? gs.map((g, i) => {
       const t = TOOLS.find(x => x.id === g.tool);
       return `<div class="gem">
@@ -523,7 +598,61 @@ function renderGems() {
         </div>
       </div>`;
     }).join("") : `<div class="card" style="text-align:center;color:#b0997a;font-size:14px;padding:26px">宝库还是空的<br>去寻宝地图写一句，就有第一件宝物了 💎</div>`}`;
+  if ($("#goRemix")) $("#goRemix").onclick = () => go(renderRemix);
   show("gems", "💎 我的宝库");
+}
+
+/* 宝物变身：练“迁移和修改”，仍然只判有没有使用目标技巧。 */
+function renderRemix() {
+  const sources = S.gems.slice(0, 6);
+  if (!sources.length) { toast("先写一句放进宝库，就能玩变身挑战～"); goBack(); return; }
+  let source = null, target = null, saved = false;
+  $("#scr-remix").innerHTML = `
+    <div class="card" style="text-align:center;padding:13px">
+      <div style="font-size:38px">💎🔄✨</div><div style="font-size:17px;font-weight:800;color:#7a5a2a">宝物变身挑战</div>
+      <div style="font-size:12px;color:#b0997a;line-height:1.6;margin-top:3px">不是把原句改“好”，而是试着<b>换一种写法</b>。你自己选句子、自己选法宝。</div>
+    </div>
+    <div class="sectionTitle">① 选一句自己的宝物</div>
+    <div id="remixSources">${sources.map((g, i) => `<button class="remixSource" data-i="${i}">${esc(g.txt)}</button>`).join("")}</div>
+    <div class="sectionTitle">② 这次想用哪件法宝？</div>
+    <div id="remixTools">${TOOLS.map(t => `<button class="remixTool" data-tool="${t.id}">${t.icon} ${t.short}</button>`).join("")}</div>
+    <div class="sectionTitle">③ 保留原来的意思，换一种写法</div>
+    <textarea id="remixArea" placeholder="先选上面的句子和法宝，再在这里写……"></textarea>
+    <button class="btn" id="remixGo">${BUDDY.e} 变身完成！</button>
+    <div style="height:12px"></div><div id="remixFeedback"></div>`;
+  $$("#remixSources .remixSource").forEach(b => b.onclick = () => {
+    source = sources[+b.dataset.i];
+    $$("#remixSources .remixSource").forEach(x => x.classList.toggle("sel", x === b));
+    $("#remixArea").value = source.txt; sndSoft();
+  });
+  $$("#remixTools .remixTool").forEach(b => b.onclick = () => {
+    target = b.dataset.tool;
+    $$("#remixTools .remixTool").forEach(x => x.classList.toggle("sel", x === b)); sndSoft();
+  });
+  $("#remixGo").onclick = () => {
+    if (!source) { toast("先选一句你自己的宝物～"); return; }
+    if (!target) { toast("再选一件想用的法宝～"); return; }
+    const text = $("#remixArea").value.trim(), tool = TOOLS.find(t => t.id === target), r = judge(text, target);
+    if (r.tooShort) { $("#remixFeedback").innerHTML = `<div class="jCard"><div class="jTitle">已经开始变啦！</div><div class="jSay">再多写几个字，让新法宝有地方施展～</div></div>`; sndSoft(); return; }
+    $("#remixFeedback").innerHTML = `<div class="jCard">
+      <div class="jTop"><span class="jBuddy">${BUDDY.e}</span><div><div class="jTitle">${r.hit ? "变身成功！" : "换了一种写法！"}</div><div class="jStars">${r.hit ? "✨✨✨" : "✨"}</div></div></div>
+      <div class="jSay">${r.hit ? `检测到了「${tool.short}」！` : `这次还没检测到「${tool.short}」，但你已经真的动手改写了。`}</div>
+      ${r.detail ? `<div class="jDetail">✅ ${esc(r.detail)}</div>` : ""}
+      ${r.tips.map(t => `<div class="jTip ${t.type}">🎯 ${esc(t.text)}</div>`).join("")}
+      <div style="height:10px"></div><button class="btn" id="remixSave">💎 收下这颗新宝物</button>
+    </div>`;
+    r.hit ? sndGood() : sndSoft();
+    $("#remixSave").onclick = () => {
+      if (saved) return; saved = true;
+      S.gems.unshift({ txt: text, tool: target, from: "宝物变身·" + source.from, d: todayStr(), stars: r.hit ? 3 : 1 });
+      S.remixes.unshift({ from: source.from, tool: target, d: todayStr(), hit: r.hit });
+      save(); bump("gems"); addCoins(r.hit ? 15 : 8);
+      if (r.hit) confetti(12);
+      toast("💎 新写法已经收进宝库！", 1800);
+      setTimeout(() => { navStack = [renderGems]; renderGems(); }, 500);
+    };
+  };
+  show("remix", "🔄 宝物变身");
 }
 
 /* ================= 周末作文（脚手架） ================= */
@@ -753,7 +882,7 @@ function renderTestMode() {
       <div class="actRow">
         <span style="font-size:26px">🧪</span>
         <span style="flex:1;font-size:15px;font-weight:800;color:#7a5a2a">测试模式
-          <span style="display:block;font-size:12px;color:#b0997a;font-weight:400">${S.testMode ? "开启中：12 座城市全部解锁" : "打开后可直接试玩全部内容，不受解锁限制"}</span>
+          <span style="display:block;font-size:12px;color:#b0997a;font-weight:400">${S.testMode ? `开启中：${STOPS.length} 座城市全部解锁` : "打开后可直接试玩全部内容，不受解锁限制"}</span>
         </span>
         <button class="btn small ${S.testMode ? "" : "ghost"}" id="tToggle">${S.testMode ? "已开启" : "已关闭"}</button>
       </div>
@@ -778,13 +907,13 @@ function renderTestMode() {
 
     <div class="card" style="font-size:12.5px;color:#6a5a42;line-height:1.9">
       <b style="color:#8a6a2a">现在的解锁规则（关掉测试模式后）：</b><br>
-      桂林默认开放 → <b>在一站完成 2 个写作任务，就解锁下一座城</b>。<br>
+      三条路线的首站都开放 → <b>在一站完成 2 个写作任务，就解锁本路线下一座城</b>。<br>
       <span style="color:#b0997a">没有任何东西是用金币锁着的——金币只用来在英语App里扭蛋、买皮肤、喂宠物。</span>
     </div>`;
 
   $("#tToggle").onclick = () => {
     S.testMode = !S.testMode; save(); sndCoin();
-    toast(S.testMode ? "🧪 测试模式已开启，12 座城市全部解锁" : "✅ 已关闭，恢复正常闯关", 2200);
+    toast(S.testMode ? `🧪 测试模式已开启，${STOPS.length} 座城市全部解锁` : "✅ 已关闭，恢复正常闯关", 2200);
     renderTestMode();
   };
   if (S.testMode) {
@@ -928,6 +1057,7 @@ function renderReport() {
     days.push({ k, lb: "日一二三四五六"[d.getDay()], n: S.gems.filter(g => g.d === k).length });
   }
   const maxN = Math.max(3, ...days.map(d => d.n));
+  const remixes = S.remixes || [], remixHits = remixes.filter(x => x.hit).length;
   $("#scr-report").innerHTML = `
     <div class="card">
       <div class="sectionTitle" style="margin:0 0 8px">📚 五大题材（小学作文就考这几类）</div>
@@ -941,12 +1071,18 @@ function renderReport() {
           <span style="font-size:11px;color:#b0997a;width:34px;text-align:right">${c}/${t}</span>
         </div>`;
       }).join("")}
-      <div style="font-size:11px;color:#b0997a;margin-top:6px;line-height:1.6">每座城市都覆盖了这五类题材——<b>练完六座城，四大考试题材全练过一遍</b>。</div>
+      <div style="font-size:11px;color:#b0997a;margin-top:6px;line-height:1.6">每座城市都覆盖了这五类题材——<b>每走完一座城，五类题材都练一遍</b>。</div>
     </div>
 
     <div class="card">
       <div class="sectionTitle" style="margin:0 0 8px">🧰 六件法宝（写作技巧）</div>
       ${byTool.map(x => `<div class="taskRow"><span class="tIcon">${x.t.icon}</span><span class="tName">${x.t.name}<span style="font-size:11px;color:#b0997a">　${x.t.short}</span></span><span class="tProg">${x.n ? "用过 " + x.n + " 次" : "还没用"}</span></div>`).join("")}
+    </div>
+
+    <div class="card">
+      <div class="sectionTitle" style="margin:0 0 6px">🔄 迁移练习</div>
+      <div style="font-size:13px;color:#6a5a42;line-height:1.8">把旧句换一种写法 <b>${remixes.length}</b> 次，其中 <b>${remixHits}</b> 次检测到了目标技巧。</div>
+      <div style="font-size:11px;color:#b0997a;margin-top:4px">这里只统计“有没有使用技巧”，不评价改写得好不好。</div>
     </div>
 
     <div class="card">

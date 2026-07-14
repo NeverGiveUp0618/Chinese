@@ -25,7 +25,10 @@ const S = () => w.eval("S");
   ok(STOPS.every(s => s.quests.length === 5), "每座城市 5 个写作任务");
   const gs = ["景", "物", "人", "事", "食"];
   ok(STOPS.every(s => gs.every(g => s.quests.some(q => q.genre === g))), "★ 每座城市都覆盖 景/物/人/事/食 五大题材");
-  ok(STOPS.length === 12 && STOPS.reduce((a, s) => a + s.quests.length, 0) === 60, "★ 12 座城市，共 60 个写作任务");
+  ok(STOPS.length === 16 && STOPS.reduce((a, s) => a + s.quests.length, 0) === 80, "★ 16 座城市，共 80 个写作任务");
+  const added = STOPS.filter(s => ["nanjing", "suzhou", "kaifeng", "guangzhou"].includes(s.id));
+  ok(added.length === 4 && added.every(s => s.cards.length === 4), "★ 四座新城市各有4张完整知识卡");
+  ok(added.every(s => s.quests.every(q => w.eval("judge")(q.demo.replace(/<[^>]+>/g, ""), q.tool).hit)), "★ 新任务的20条范例都能命中指定技巧");
   w.eval("navStack=[()=>renderStop(STOPS[0])];renderStop(STOPS[0]);");
   ok($("#scr-stop").innerHTML.includes("genreTag"), "★ 任务列表显示题材标签");
   ok($("#scr-stop").innerHTML.includes("写景") && $("#scr-stop").innerHTML.includes("美食"), "看得到「写景」「美食」等题材");
@@ -88,6 +91,7 @@ const S = () => w.eval("S");
   ok($("#scr-report").innerHTML.includes("写景") && $("#scr-report").innerHTML.includes("状物") && $("#scr-report").innerHTML.includes("写人"), "四大考试题材都在");
   ok($("#scr-report").innerHTML.includes("六件法宝"), "有法宝掌握情况");
   ok($("#scr-report").innerHTML.includes("最近 7 天"), "有7天趋势");
+  ok($("#scr-report").innerHTML.includes("迁移练习") && $("#scr-report").innerHTML.includes("不评价改写得好不好"), "★ 报告统计迁移次数，但不评价改写好坏");
   ok($("#scr-report").innerHTML.includes("别急着补短板"), "★ 给家长的解读建议");
 
   console.log("\n⑥ 宝库全览 / 导出");
@@ -127,8 +131,8 @@ const S = () => w.eval("S");
 
   // 全部城市解锁
   $$(".tab").find(t => t.dataset.tab === "map").click();
-  ok($$("#scr-map .stopCard.locked").length === 0, "★ 12 座城市全部解锁");
-  ok($$("#scr-map .stopCard").length === 12, "★ 现在有 12 座城市（原来 6 座）");
+  ok($$("#scr-map .stopCard.locked").length === 0, "★ 16 座城市全部解锁");
+  ok($$("#scr-map .stopCard").length === 16, "★ 现在有 16 座城市");
 
   // 首页横幅
   $$(".tab").find(t => t.dataset.tab === "home").click();
@@ -156,7 +160,7 @@ const S = () => w.eval("S");
   $("#tToggle").click();
   ok(S().testMode === false, "可关闭");
   $$(".tab").find(t => t.dataset.tab === "map").click();
-  ok($$("#scr-map .stopCard.locked").length === 11, "★ 关闭后重新上锁（只剩桂林开放）");
+  ok($$("#scr-map .stopCard.locked").length === 13, "★ 关闭后恢复路线解锁（三条首站开放）");
 
   console.log(`\n结果: ${pass} 通过, ${fail} 失败`);
   process.exit(fail ? 1 : 0);

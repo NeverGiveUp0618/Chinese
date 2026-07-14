@@ -68,21 +68,48 @@ body {
 .homeGrid .hIcon { font-size: 32px; }
 .homeGrid .hName { font-size: 14px; font-weight: 700; margin-top: 4px; color: #7a5a2a; }
 .homeGrid .hSub { font-size: 11px; color: #b0997a; margin-top: 2px; }
+.homeGrid .transferReady { border:2px solid #d9a441; background:linear-gradient(145deg,#fffdf7,#fff3d6); }
+.homeGrid .transferReady .hName::after { content:" 可用了"; color:#6a9a4a; font-size:10px; }
 
-/* ---- 寻宝地图 ---- */
-.stopCard { display: flex; align-items: center; gap: 12px; }
+/* ---- 卡通探险路线图（不是地理比例地图，不绘制国界） ---- */
+.adventureMap { position: relative; padding: 24px 0 12px; overflow: hidden; }
+.routeChapter { background:rgba(255,253,247,.5); border:2px solid rgba(217,164,65,.18); border-radius:20px; padding:10px 8px 2px; margin-bottom:14px; }
+.routeTitle { display:flex; align-items:center; gap:9px; font-size:22px; font-weight:800; color:#7a5a2a; padding:2px 8px 0; }
+.routeTitle small { display:block; font-size:11px; font-weight:400; color:#b0997a; margin-top:1px; }
+.adventureMap::before { content:""; position:absolute; left:50%; top:16px; bottom:18px; border-left:5px dotted #d7b56d; transform:translateX(-2px); }
+.mapScenery { display:flex; justify-content:space-between; align-items:end; font-size:30px; padding:0 10px 8px; position:relative; z-index:1; }
+.routeStop { width:calc(50% + 1px); position:relative; padding:7px 18px 7px 0; }
+.routeStop.right { margin-left:auto; padding:7px 0 7px 18px; }
+.routeDot { position:absolute; z-index:2; right:-9px; top:50%; width:18px; height:18px; border-radius:50%; background:#f8d36a; border:4px solid #fff8e8; box-shadow:0 1px 5px rgba(120,85,35,.28); transform:translateY(-50%); }
+.routeStop.right .routeDot { right:auto; left:-9px; }
+.routeStop.done .routeDot { background:#78b85a; }
+.routeStop.locked .routeDot { background:#b8ad9a; }
+.stopCard { display: flex; align-items: center; gap: 9px; margin:0; padding:11px 10px; cursor:pointer; border:2px solid rgba(217,164,65,.2); }
+.routeStop.left .stopCard { border-radius:18px 8px 18px 18px; }
+.routeStop.right .stopCard { border-radius:8px 18px 18px 18px; }
 .stopCard.locked { opacity: .5; filter: grayscale(.7); }
-.stopIcon { font-size: 38px; }
+.stopIcon { font-size: 32px; }
 .stopInfo { flex: 1; }
-.stopName { font-size: 17px; font-weight: 800; color: #7a5a2a; }
+.stopName { font-size: 16px; font-weight: 800; color: #7a5a2a; }
 .stopSub { font-size: 12px; color: #b0997a; }
-.stopStars { font-size: 15px; color: #d9a441; letter-spacing: 1px; }
+.stopStars { font-size: 12px; color: #d9a441; letter-spacing: 0; }
+@media (max-width:400px) {
+  .adventureMap::before { left:18px; }
+  .routeStop, .routeStop.right { width:100%; margin-left:0; padding:6px 0 6px 38px; }
+  .routeDot, .routeStop.right .routeDot { left:9px; right:auto; }
+  .routeStop.left .stopCard, .routeStop.right .stopCard { border-radius:8px 18px 18px 18px; }
+  .mapScenery { padding-left:0; }
+}
 
 /* ---- 知识卡（她爱看的部分） ---- */
 .kcard { background: #fffdf7; border-left: 4px solid #d9a441; border-radius: 0 14px 14px 0; padding: 12px 14px; margin-bottom: 10px; box-shadow: 0 2px 8px rgba(140,110,70,.12); }
 .kcard .kt { font-size: 15px; font-weight: 800; color: #8a5a2a; margin-bottom: 4px; }
 .kcard .kd { font-size: 13.5px; line-height: 1.75; color: #5a4a34; }
 .kcard .ke { font-size: 26px; float: right; margin-left: 8px; }
+.clueOpts { display:flex; flex-direction:column; gap:10px; }
+.clueOpt { width:100%; border:2px solid #ead9b8; border-radius:14px; background:#fffdf7; color:#5a4a34; padding:13px 12px; font-size:14px; line-height:1.55; font-family:inherit; text-align:left; }
+.clueOpt.right { border-color:#78b85a; background:#edf8e7; color:#477234; }
+.clueOpt.wrong { border-color:#d77a6a; background:#fff0ed; color:#a04a3c; }
 
 /* ---- 写作区（核心） ---- */
 .questBox { background: #fffdf7; border: 2px dashed #d9b871; border-radius: 16px; padding: 14px; margin-bottom: 12px; }
@@ -131,6 +158,14 @@ body {
 .gemTxt { font-size: 14px; line-height: 1.7; color: #4a3c28; }
 .gemMeta { font-size: 11px; color: #b0997a; margin-top: 5px; display: flex; justify-content: space-between; }
 .gemTag { display: inline-block; background: #f5e6c8; color: #8a5a2a; border-radius: 8px; padding: 1px 7px; font-size: 11px; font-weight: 700; }
+.remixCall { display:flex; align-items:center; gap:10px; border:2px solid #d9a441; background:linear-gradient(145deg,#fffdf7,#fff3d6); color:#7a5a2a; cursor:pointer; }
+.remixCall small { display:block; font-size:11px; color:#b0997a; font-weight:400; margin-top:2px; }
+.remixSource { width:100%; background:#fffdf7; border:2px solid #ead9b8; border-radius:12px; padding:10px 12px; margin-bottom:8px; text-align:left; font:inherit; font-size:13px; line-height:1.6; color:#5a4a34; }
+.remixSource.sel { border-color:#d9a441; background:#fff3d6; }
+#remixTools { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:12px; }
+.remixTool { border:2px solid #ead9b8; border-radius:18px; background:#fffdf7; padding:7px 11px; font:inherit; font-size:12px; color:#7a5a2a; }
+.remixTool.sel { border-color:#78b85a; background:#edf8e7; color:#477234; }
+#remixArea { width:100%; min-height:110px; border:2px solid #e5d2ae; border-radius:14px; padding:12px; font-size:16px; line-height:1.8; color:#4a3c28; background:#fffdf7; font-family:inherit; resize:none; outline:none; user-select:text; -webkit-user-select:text; margin-bottom:10px; }
 
 /* ---- 法宝 ---- */
 .toolCard { display: flex; align-items: center; gap: 12px; }
@@ -174,6 +209,7 @@ body {
     <section id="scr-tools" class="screen"></section>
     <section id="scr-teach" class="screen"></section>
     <section id="scr-gems" class="screen"></section>
+    <section id="scr-remix" class="screen"></section>
     <section id="scr-essay" class="screen"></section>
     <section id="scr-essayWrite" class="screen"></section>
     <section id="scr-done" class="screen"></section>

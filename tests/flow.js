@@ -30,20 +30,36 @@ const ok = (c, m) => { c ? pass++ : fail++; console.log(`  ${c ? "✓" : "✗ FA
   console.log("— 寻宝地图 —");
   $$(".tab").find(t => t.dataset.tab === "map").click();
   const stops = $$("#scr-map .stopCard");
-  ok(stops.length === 12, "12 个寻宝站点");
-  ok(!stops[0].classList.contains("locked"), "桂林默认解锁");
-  ok(stops[1].classList.contains("locked"), "北京初始锁定");
-  stops[1].click();
+  ok(stops.length === 16, "16 个寻宝站点（新增南京/苏州/开封/广州）");
+  ok(!!$("#scr-map .adventureMap") && $$("#scr-map .routeDot").length === 16, "★ 卡通探险路线图完整连接16站");
+  ok($("#scr-map").textContent.includes("非地理比例地图"), "★ 明确标注为游戏路线，不冒充地理地图");
+  ok(["南京", "苏州", "开封", "广州"].every(n => $("#scr-map").textContent.includes(n)), "★ 四座新城市出现在路线图");
+  ok($$("#scr-map .routeChapter").length === 3, "★ 三条主题路线可选");
+  const cardOf = name => stops.find(c => c.textContent.includes(name));
+  ok(["桂林", "北京", "敦煌"].every(n => !cardOf(n).classList.contains("locked")), "★ 三条路线首站都默认解锁");
+  ok(cardOf("厦门").classList.contains("locked"), "路线内的下一站仍需闯关解锁");
+  cardOf("厦门").click();
   ok($("#scr-map").classList.contains("on"), "点锁定站点不进入");
 
   console.log("— 桂林站：知识卡 —");
-  stops[0].click();
+  cardOf("桂林").click();
   ok($("#scr-stop").classList.contains("on"), "进入桂林");
   ok($("#scr-stop").innerHTML.includes("知识卡"), "有知识卡入口");
   $("#readCards").click();
   ok($("#scr-cards").classList.contains("on"), "知识卡页显示");
-  ok($$(".kcard").length === 4, "4 张知识卡（她爱看的部分）");
-  ok($("#scr-cards").innerHTML.includes("喀斯特"), "知识卡有真内容");
+  ok($$(".kcard").length === 1 && !!$("#cardOpen"), "★ 知识卡逐张翻开，不一次铺满四段文字");
+  for (let i = 0; i < 4; i++) {
+    $("#cardOpen").click();
+    if (i === 0) ok($("#scr-cards").innerHTML.includes("喀斯特"), "知识卡有真内容");
+    $("#clueReady").click();
+    ok($$("#scr-cards .clueOpt").length === 3, `线索卡${i + 1}：读完马上3选1找关键信息`);
+    const clue = w.eval(`cardClue(STOPS[0].cards[${i}])`);
+    const right = $$("#scr-cards .clueOpt").find(b => b.textContent === clue);
+    right.click();
+    ok(right.classList.contains("right"), `线索卡${i + 1}：选择后立即反馈`);
+    await sleep(930);
+  }
+  ok(S().stops.guilin.read === true && !!$("#cardsGo"), "★ 完成4次互动后才记为已读");
   $("#cardsGo").click();
 
   console.log("— 寻宝任务：微写作 + 小獾即时回应（核心）—");
@@ -109,6 +125,21 @@ const ok = (c, m) => { c ? pass++ : fail++; console.log(`  ${c ? "✓" : "✗ FA
   ok($("#scr-gems").classList.contains("on"), "宝库显示");
   ok($$(".gem").length === 2, "2 件宝物");
   ok($("#scr-gems").innerHTML.includes("你自己写的"), "★ 强调「这些都是你自己写的」");
+
+  console.log("— 🔄 宝物变身（把旧句迁移成新技巧）—");
+  ok(!!$("#goRemix"), "★ 宝库有素材后出现变身挑战");
+  $("#goRemix").click();
+  ok($("#scr-remix").classList.contains("on"), "进入宝物变身");
+  $("#remixSources .remixSource").click();
+  $("#remixTools [data-tool='action']").click();
+  $("#remixArea").value = "我蹲下身，伸出手，捏起石头，擦了擦，又举到眼前仔细看。";
+  $("#remixGo").click();
+  ok($("#remixFeedback").textContent.includes("变身成功"), "★ 改写后立即检测到目标技巧");
+  ok($("#remixFeedback").textContent.includes("动作分解"), "明确告诉孩子检测到了什么");
+  $("#remixSave").click();
+  await sleep(550);
+  ok(S().remixes.length === 1 && S().remixes[0].hit === true, "★ 迁移练习被记录，但只记是否命中技巧");
+  ok(S().gems.length === 3 && S().gems[0].from.includes("宝物变身"), "★ 新写法收进宝库，旧句仍保留");
 
   console.log("— 🧰 六件法宝 —");
   $$(".tab").find(t => t.dataset.tab === "tools").click();
