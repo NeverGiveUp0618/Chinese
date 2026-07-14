@@ -137,18 +137,39 @@ body {
 .stopName { font-size: 16px; font-weight: 800; color: #7a5a2a; }
 .stopSub { font-size: 12px; color: #b0997a; }
 .stopStars { font-size: 12px; color: #d9a441; letter-spacing: 0; }
-/* 古都时光线：原创漫画长卷，不使用中国轮廓、不表达真实地理位置 */
+/* 三条原创漫画地图：参考相对方位，不使用中国轮廓、国界或省界 */
+.comicMap { padding:0; overflow:hidden; }
+.comicMap::before { display:none; }
+.comicRoad { position:absolute; inset:8px 0 24px; width:100%; overflow:visible; }
+.comicRoad path { fill:none; stroke-width:7; stroke-linecap:round; stroke-dasharray:1 13; filter:drop-shadow(0 2px 0 rgba(255,255,255,.65)); }
+.mapCompass { position:absolute; z-index:3; left:12px; top:10px; width:34px; height:49px; border-radius:18px; background:rgba(255,255,255,.78); color:#765a3c; text-align:center; box-shadow:0 2px 7px rgba(70,55,35,.12); }
+.mapCompass span,.mapCompass b { display:block; }.mapCompass span { font-size:22px; line-height:25px; }.mapCompass b { font-size:11px; }
+.mapLegend { position:absolute; z-index:3; left:50%; bottom:8px; transform:translateX(-50%); width:94%; text-align:center; color:#806b52; font-size:9px; font-weight:700; letter-spacing:.02em; }
+.comicStop { position:absolute; z-index:4; width:28%; padding:0; margin:0; }
+.comicStop .stopCard { display:block; text-align:center; padding:7px 4px; border-radius:16px!important; background:rgba(255,253,244,.94); box-shadow:0 6px 14px rgba(70,55,35,.14); }
+.comicStop .stopIcon { font-size:25px; line-height:1.1; }.comicStop .stopName { font-size:13px; white-space:nowrap; }.comicStop .stopName span { display:none; }.comicStop .stopSub { font-size:9px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }.comicStop .stopStars { font-size:9px; }
+.comicStop .routeDot { width:22px; height:22px; border:5px solid rgba(255,255,255,.88); box-shadow:0 2px 7px rgba(70,55,35,.25); }.comicStop.left .routeDot { right:-14px; left:auto; }.comicStop.right .routeDot { left:-14px; right:auto; }
+/* 山河奇境：拉萨向西，成都偏西北，厦门向东，三亚最南 */
+.wonderMap { height:500px; background:linear-gradient(180deg,#eaf7ff 0%,#e7f5de 50%,#d8f2ef 100%); box-shadow:inset 0 0 28px rgba(45,112,130,.11); }
+.wonderWash { position:absolute; inset:0; opacity:.26; background:radial-gradient(circle at 20% 25%,#fff 0 2px,transparent 3px),radial-gradient(circle at 75% 70%,#87c7bd 0 1px,transparent 2px); background-size:35px 35px,27px 27px; }
+.wonderRoad { height:470px; }.wonderRoad path { stroke:#5ca39b; }
+.wonderStop.step-0 { left:40%; top:188px; }.wonderStop.step-1 { right:0; top:178px; }.wonderStop.step-2 { left:24%; top:82px; }.wonderStop.step-3 { left:0; top:34px; }.wonderStop.step-4 { left:44%; top:392px; }.wonderStop.step-5 { left:50%; top:294px; }
+.wonderDecor,.craftDecor { position:absolute; z-index:1; filter:drop-shadow(0 4px 4px rgba(50,70,60,.12)); }
+.wonderDecor.snow { left:3%; top:112px; font-size:45px; }.wonderDecor.panda { left:48%; top:80px; font-size:35px; }.wonderDecor.river { left:25%; top:270px; font-size:54px; color:#6eb4c6; transform:rotate(28deg); }.wonderDecor.palms { right:4%; top:300px; font-size:37px; }.wonderDecor.sea { right:2%; bottom:35px; font-size:30px; }.wonderDecor.cloud { right:30%; top:12px; font-size:32px; }
+/* 匠心风物：敦煌向西，哈尔滨在东北，江南城市集中在东部 */
+.craftMap { height:470px; background:linear-gradient(180deg,#eef5ff 0%,#fff1d6 45%,#e7f1e5 100%); box-shadow:inset 0 0 28px rgba(87,80,110,.1); }
+.craftWash { position:absolute; inset:0; opacity:.2; background:linear-gradient(115deg,transparent 48%,#c5ab7b 49%,transparent 50%),radial-gradient(circle,#afc6d4 0 1px,transparent 2px); background-size:70px 70px,25px 25px; }
+.craftRoad { height:440px; }.craftRoad path { stroke:#9a87ad; }
+.craftStop.step-0 { left:0; top:158px; }.craftStop.step-1 { right:0; top:212px; }.craftStop.step-2 { left:55%; top:328px; }.craftStop.step-3 { right:0; top:24px; }.craftStop.step-4 { left:55%; top:218px; }
+.craftDecor.desert { left:2%; top:250px; font-size:43px; }.craftDecor.ice { right:28%; top:25px; font-size:31px; }.craftDecor.garden { left:38%; bottom:32px; font-size:38px; }.craftDecor.canal { right:1%; top:305px; font-size:31px; }.craftDecor.brush { left:36%; top:160px; font-size:35px; transform:rotate(-15deg); }
+/* 古都时光线 */
 .historyMap { height:470px; margin-top:8px; padding:0; border-radius:18px; background:linear-gradient(180deg,#fff7df 0%,#f8e6be 48%,#efd4a4 100%); box-shadow:inset 0 0 28px rgba(143,92,34,.12); }
-.historyMap::before { display:none; }
 .historyWash { position:absolute; inset:0; opacity:.22; background-image:radial-gradient(circle at 15% 15%,#cc9e56 0 1px,transparent 1.5px),radial-gradient(circle at 75% 30%,#d8ad69 0 1px,transparent 1.5px); background-size:21px 21px,29px 29px; }
-.historyRoad { position:absolute; inset:8px 0 24px; width:100%; height:440px; overflow:visible; }
-.historyRoad path { fill:none; stroke:#c18a49; stroke-width:7; stroke-linecap:round; stroke-dasharray:1 13; filter:drop-shadow(0 2px 0 rgba(255,255,255,.65)); }
-.historyStop { position:absolute; z-index:4; width:30%; padding:0; margin:0; }
+.historyRoad { height:440px; }.historyRoad path { stroke:#c18a49; }
+.historyStop { width:30%; }
 /* 北京在北；西安向西；洛阳、开封依次向东；南京在东南 */
 .historyStop.step-0 { right:3%; top:24px; }.historyStop.step-1 { left:2%; top:190px; }.historyStop.step-2 { left:35%; top:181px; }.historyStop.step-3 { right:2%; top:174px; }.historyStop.step-4 { right:0; top:330px; }
-.historyStop .stopCard { background:rgba(255,253,244,.94); border-color:#dfb873; box-shadow:0 6px 14px rgba(126,76,31,.15); }
-.historyStop .stopCard { display:block; text-align:center; padding:7px 4px; }
-.historyStop .stopIcon { font-size:25px; line-height:1.1; }.historyStop .stopName { font-size:13px; white-space:nowrap; }.historyStop .stopName span { display:none; }.historyStop .stopSub { font-size:9px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }.historyStop .stopStars { font-size:9px; }
+.historyStop .stopCard { border-color:#dfb873; }
 .historyStop.left .stopCard,.historyStop.right .stopCard { border-radius:16px; }
 .historyStop .routeDot { width:22px; height:22px; border:5px solid #fff4d6; background:#e7a93f; box-shadow:0 2px 7px rgba(110,65,20,.28); }
 .historyStop.left .routeDot { right:-14px; left:auto; }.historyStop.right .routeDot { left:-14px; right:auto; }
@@ -157,9 +178,6 @@ body {
 .historyDecor small { display:block; font-size:9px; color:#a4763e; font-weight:800; margin-top:-5px; }
 .historyDecor.gate { right:35%; top:25px; }.historyDecor.tower { left:3%; top:105px; font-size:34px; }.historyDecor.scroll { left:40%; top:300px; font-size:35px; transform:rotate(8deg); }.historyDecor.river { left:5%; top:350px; font-size:25px; color:#79a7ad; transform:rotate(-12deg); }.historyDecor.school { right:30%; top:355px; font-size:38px; }
 .historyCloud { position:absolute; right:36%; top:8px; font-size:30px; opacity:.68; }
-.historyCompass { position:absolute; z-index:3; left:12px; top:10px; width:34px; height:49px; border-radius:18px; background:rgba(255,250,231,.85); color:#9b6a2f; text-align:center; box-shadow:0 2px 7px rgba(110,65,20,.12); }
-.historyCompass span,.historyCompass b { display:block; }.historyCompass span { font-size:22px; line-height:25px; }.historyCompass b { font-size:11px; }
-.historyLegend { position:absolute; z-index:3; left:50%; bottom:8px; transform:translateX(-50%); width:90%; text-align:center; color:#9b713f; font-size:10px; font-weight:700; letter-spacing:.05em; }
 @media (max-width:400px) {
   .adventureMap::before { left:18px; }
   .routeStop, .routeStop.right { width:100%; margin-left:0; padding:6px 0 6px 38px; }
@@ -167,7 +185,10 @@ body {
   .routeStop.left .stopCard, .routeStop.right .stopCard { border-radius:8px 18px 18px 18px; }
   .mapScenery { padding-left:0; }
   .historyMap { height:470px; }
-  .historyMap .historyStop { width:31%; margin:0; padding:0; }
+  .comicMap .comicStop { width:31%; margin:0; padding:0; }
+  .wonderMap .wonderStop.step-0 { left:38%; }.wonderMap .wonderStop.step-1 { right:0; }.wonderMap .wonderStop.step-2 { left:22%; }.wonderMap .wonderStop.step-3 { left:0; }.wonderMap .wonderStop.step-4 { left:42%; }.wonderMap .wonderStop.step-5 { left:49%; }
+  .craftMap .craftStop.step-0 { left:0; }.craftMap .craftStop.step-1 { right:0; }.craftMap .craftStop.step-2 { left:53%; }.craftMap .craftStop.step-3 { right:0; }.craftMap .craftStop.step-4 { left:53%; }
+  .historyMap .historyStop { width:31%; }
   .historyMap .historyStop.step-0 { left:auto; right:2%; top:27px; }.historyMap .historyStop.step-1 { left:1%; right:auto; top:193px; }.historyMap .historyStop.step-2 { left:34%; right:auto; top:184px; }.historyMap .historyStop.step-3 { left:auto; right:1%; top:177px; }.historyMap .historyStop.step-4 { left:auto; right:0; top:333px; }
   .historyMap .historyStop.left .routeDot { left:auto; right:-14px; }.historyMap .historyStop.right .routeDot { left:-14px; right:auto; }
   .historyDecor.gate { right:35%; }.historyDecor.tower { left:1%; top:108px; }.historyDecor.scroll { left:39%; right:auto; top:300px; }.historyDecor.river { left:0; top:355px; }.historyDecor.school { right:28%; top:360px; opacity:.62; }

@@ -298,6 +298,21 @@ function renderPassport() {
   show("passport", "📔 探险护照");
 }
 
+function routeMapBackdrop(route) {
+  const common = `<div class="mapCompass" aria-label="北方在上"><span>↑</span><b>北</b></div>`;
+  if (route.id === "wonder") return `${common}<div class="wonderWash"></div>
+    <svg class="comicRoad wonderRoad" viewBox="0 0 100 500" preserveAspectRatio="none" aria-hidden="true"><path d="M54 220 C70 207 78 205 86 211 C68 174 48 119 37 104 C28 91 18 91 11 102 C31 186 49 331 58 421 C62 385 62 340 62 318"/></svg>
+    <div class="wonderDecor snow">🏔️</div><div class="wonderDecor panda">🐼</div><div class="wonderDecor river">〰️</div><div class="wonderDecor palms">🌴</div><div class="wonderDecor sea">🌊🐚</div><div class="wonderDecor cloud">☁️</div>`;
+  if (route.id === "craft") return `${common}<div class="craftWash"></div>
+    <svg class="comicRoad craftRoad" viewBox="0 0 100 470" preserveAspectRatio="none" aria-hidden="true"><path d="M13 191 C42 184 71 226 87 240 C80 278 74 326 69 365 C73 233 84 96 89 63 C89 129 79 211 70 250"/></svg>
+    <div class="craftDecor desert">🏜️</div><div class="craftDecor ice">❄️🏰</div><div class="craftDecor garden">🌸</div><div class="craftDecor canal">🛶〰️</div><div class="craftDecor brush">🖌️</div>`;
+  return `${common}<div class="historyWash"></div>
+    <svg class="comicRoad historyRoad" viewBox="0 0 100 470" preserveAspectRatio="none" aria-hidden="true"><path d="M80 62 C67 113 35 175 17 234 C28 235 39 230 49 226 C60 222 71 219 80 218 C86 262 90 325 87 378"/></svg>
+    <div class="historyDecor gate">🏯<small>穿过城门</small></div><div class="historyDecor tower">🗼</div>
+    <div class="historyDecor scroll">📜</div><div class="historyDecor river">〰️〰️</div>
+    <div class="historyDecor school">🏛️<small>古城书院</small></div><div class="historyCloud">☁️</div>`;
+}
+
 /* ================= 寻宝地图 ================= */
 function renderMap() {
   $("#scr-map").innerHTML = `
@@ -309,18 +324,13 @@ function renderMap() {
     <div style="font-size:12px;color:#8a6a2a;text-align:center;margin:4px 0 10px">三条路线任选一条，今天想去哪儿由你决定</div>
     ${ROUTES.map(route => `<div class="routeChapter" data-route="${route.id}">
       <div class="routeTitle"><span>${route.icon}</span><span>${route.name}<small>${route.sub}</small></span></div>
-      <div class="adventureMap ${route.id === "history" ? "historyMap" : ""}">
-      ${route.id === "history" ? `<div class="historyWash"></div>
-        <div class="historyCompass" aria-label="北方在上"><span>↑</span><b>北</b></div>
-        <svg class="historyRoad" viewBox="0 0 100 470" preserveAspectRatio="none" aria-hidden="true"><path d="M80 62 C67 113 35 175 17 234 C28 235 39 230 49 226 C60 222 71 219 80 218 C86 262 90 325 87 378"/></svg>
-        <div class="historyDecor gate">🏯<small>穿过城门</small></div><div class="historyDecor tower">🗼</div>
-        <div class="historyDecor scroll">📜</div><div class="historyDecor river">〰️〰️</div>
-        <div class="historyDecor school">🏛️<small>古城书院</small></div><div class="historyCloud">☁️</div>` : `<div class="mapScenery"><span>🌲</span><span>☁️</span><span>🎁</span></div>`}
+      <div class="adventureMap comicMap ${route.id}Map">
+      ${routeMapBackdrop(route)}
       ${route.stops.map((id, ri) => {
       const i = STOPS.findIndex(x => x.id === id), s = STOPS[i];
       const st = stopS(s.id), open = stopUnlocked(i);
       const n = st.done.length, tot = s.quests.length;
-      return `<div class="routeStop ${route.id === "history" ? `historyStop step-${ri}` : ""} ${ri % 2 ? "right" : "left"} ${open ? "" : "locked"} ${n === tot ? "done" : ""}">
+      return `<div class="routeStop comicStop ${route.id}Stop step-${ri} ${ri % 2 ? "right" : "left"} ${open ? "" : "locked"} ${n === tot ? "done" : ""}">
         <span class="routeDot"></span>
         <div class="card stopCard ${open ? "" : "locked"}" data-i="${i}">
           <div class="stopIcon">${open ? s.icon : "🔒"}</div>
@@ -332,7 +342,7 @@ function renderMap() {
         </div>
       </div>`;
     }).join("")}
-      ${route.id === "history" ? `<div class="historyLegend">方位关系参考真实方向 · 城市位置与距离为游戏化呈现</div>` : `<div class="mapScenery"><span>🧭</span><span>✨</span><span>${route.icon}</span></div>`}
+      <div class="mapLegend">方位关系参考真实方向 · 城市位置与距离为游戏化呈现</div>
     </div></div>`).join("")}`;
   $$("#scr-map .stopCard").forEach(c => {
     c.onclick = () => {
