@@ -38,6 +38,7 @@ const ok = (c, m) => { c ? pass++ : fail++; console.log(`  ${c ? "✓" : "✗ FA
   ok($$("#scr-map .routeChapter").length === 3, "★ 三条主题路线可选");
   ok(!!$("#scr-map [data-route='history'] .historyMap") && !!$("#scr-map .historyRoad"), "★ 古都时光线改成有蜿蜒道路的漫画长卷地图");
   ok($$("#scr-map [data-route='history'] .historyStop").length === 5 && $$("#scr-map [data-route='history'] .historyDecor").length >= 5, "★ 五座古都分布在城门、古塔、河流和书院场景中");
+  ok(!!$("#scr-map .historyCompass") && $("#scr-map .historyLegend").textContent.includes("方位关系参考真实方向"), "★ 有北向标，并说明真实方位与游戏化距离的边界");
   const cardOf = name => stops.find(c => c.textContent.includes(name));
   ok(["桂林", "北京", "敦煌"].every(n => !cardOf(n).classList.contains("locked")), "★ 三条路线首站都默认解锁");
   ok(cardOf("厦门").classList.contains("locked"), "路线内的下一站仍需闯关解锁");

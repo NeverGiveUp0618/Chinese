@@ -311,7 +311,8 @@ function renderMap() {
       <div class="routeTitle"><span>${route.icon}</span><span>${route.name}<small>${route.sub}</small></span></div>
       <div class="adventureMap ${route.id === "history" ? "historyMap" : ""}">
       ${route.id === "history" ? `<div class="historyWash"></div>
-        <svg class="historyRoad" viewBox="0 0 100 600" preserveAspectRatio="none" aria-hidden="true"><path d="M26 72 C72 105 78 155 68 190 S25 245 29 300 S78 354 71 411 S27 475 37 535"/></svg>
+        <div class="historyCompass" aria-label="北方在上"><span>↑</span><b>北</b></div>
+        <svg class="historyRoad" viewBox="0 0 100 470" preserveAspectRatio="none" aria-hidden="true"><path d="M80 62 C67 113 35 175 17 234 C28 235 39 230 49 226 C60 222 71 219 80 218 C86 262 90 325 87 378"/></svg>
         <div class="historyDecor gate">🏯<small>穿过城门</small></div><div class="historyDecor tower">🗼</div>
         <div class="historyDecor scroll">📜</div><div class="historyDecor river">〰️〰️</div>
         <div class="historyDecor school">🏛️<small>古城书院</small></div><div class="historyCloud">☁️</div>` : `<div class="mapScenery"><span>🌲</span><span>☁️</span><span>🎁</span></div>`}
@@ -331,7 +332,7 @@ function renderMap() {
         </div>
       </div>`;
     }).join("")}
-      ${route.id === "history" ? `<div class="historyLegend">漫画古都长卷 · 沿着时光路去寻宝</div>` : `<div class="mapScenery"><span>🧭</span><span>✨</span><span>${route.icon}</span></div>`}
+      ${route.id === "history" ? `<div class="historyLegend">方位关系参考真实方向 · 城市位置与距离为游戏化呈现</div>` : `<div class="mapScenery"><span>🧭</span><span>✨</span><span>${route.icon}</span></div>`}
     </div></div>`).join("")}`;
   $$("#scr-map .stopCard").forEach(c => {
     c.onclick = () => {
