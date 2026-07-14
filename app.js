@@ -27,7 +27,8 @@ function defState() {
     tools: {},      // toolId -> {learned:bool, used:n, best:0}
     gems: [],       // 宝库：{txt, tool, from, d}
     essays: {},     // essayId -> {paras:[], done:bool, score:0}
-    checkins: {}
+    checkins: {},
+    testMode: false // 家长测试模式：全部解锁，给孩子用前记得关掉
   };
 }
 let S = defState();
@@ -127,6 +128,7 @@ $$(".tab").forEach(t => {
 function stopS(id) { if (!S.stops[id]) S.stops[id] = { read: false, done: [], stars: {} }; return S.stops[id]; }
 function toolS(id) { if (!S.tools[id]) S.tools[id] = { learned: false, used: 0, best: 0 }; return S.tools[id]; }
 function stopUnlocked(i) {
+  if (S.testMode) return true;                // 测试模式：全部解锁
   if (i === 0) return true;
   const prev = STOPS[i - 1];
   return stopS(prev.id).done.length >= 2;     // 上一站做完 2 个任务就开下一站
@@ -167,6 +169,7 @@ function renderHome() {
   const learned = TOOLS.filter(t => toolS(t.id).learned).length;
   const nextStop = STOPS.find((s, i) => stopUnlocked(i) && stopS(s.id).done.length < s.quests.length) || STOPS[0];
   $("#scr-home").innerHTML = `
+    ${S.testMode ? `<div class="card" id="testBanner" style="background:#fff3d6;text-align:center;padding:10px;font-size:13px;font-weight:700;color:#c07a2c">🧪 测试模式开启中（全部城市已解锁）· 点我关闭</div>` : ""}
     <div class="card" id="buddyCard">
       <div style="position:absolute;top:12px;left:12px;background:#fff3d6;color:#c07a2c;font-size:12px;font-weight:700;border-radius:12px;padding:3px 9px">🔥 ${S.streak} 天</div>
       <div id="buddyE">${BUDDY.e}</div>
@@ -208,6 +211,9 @@ function renderHome() {
   $("#goTools").onclick = () => go(renderTools);
   $("#goEssay").onclick = () => go(renderEssayList);
   $("#parentLink").onclick = () => go(renderParent);
+  if (S.testMode) $("#testBanner").onclick = () => {
+    S.testMode = false; save(); toast("✅ 测试模式已关闭，恢复正常闯关", 2200); renderHome();
+  };
   show("home", "🏕️ 探险营地");
   updateCoinBox();
 }
@@ -714,6 +720,13 @@ function renderParent() {
       </span><span style="font-size:20px;color:#d9a441">▶</span>
     </div>
 
+    <div class="card actRow" id="pTestMode" style="${S.testMode ? "background:#fff3d6" : ""}">
+      <span style="font-size:26px">🧪</span>
+      <span style="flex:1;font-size:15px;font-weight:800;color:#7a5a2a">测试模式
+        <span style="display:block;font-size:12px;color:#b0997a;font-weight:400">${S.testMode ? "开启中：全部城市已解锁" : "你自己试玩用（解锁全部城市 + 造数据）"}</span>
+      </span><span style="font-size:20px;color:#d9a441">▶</span>
+    </div>
+
     <div class="card" style="font-size:12.5px;color:#6a5a42;line-height:1.9">
       <b style="color:#8a6a2a">这个后台最重要的一件事：</b><br>
       系统只能判断她<b>用没用某个技巧</b>（比喻、五感、动作分解……），<b>但「写得好不好」判不了，也不该判</b>。<br>
@@ -726,7 +739,94 @@ function renderParent() {
   $("#pGems").onclick = () => go(renderGemsAdmin);
   $("#pReward").onclick = () => go(renderReward);
   $("#pBackup").onclick = () => go(renderBackup);
+  $("#pTestMode").onclick = () => go(renderTestMode);
   show("parent", "🔐 家长后台");
+}
+
+/* ---------------- 🧪 测试模式 ----------------
+ * 你得能造出任意状态才能验收：全部解锁、有金币、有待批阅的作文……
+ */
+function renderTestMode() {
+  const w = loadWallet();
+  $("#scr-test").innerHTML = `
+    <div class="card" style="${S.testMode ? "background:#fff3d6" : ""}">
+      <div class="actRow">
+        <span style="font-size:26px">🧪</span>
+        <span style="flex:1;font-size:15px;font-weight:800;color:#7a5a2a">测试模式
+          <span style="display:block;font-size:12px;color:#b0997a;font-weight:400">${S.testMode ? "开启中：12 座城市全部解锁" : "打开后可直接试玩全部内容，不受解锁限制"}</span>
+        </span>
+        <button class="btn small ${S.testMode ? "" : "ghost"}" id="tToggle">${S.testMode ? "已开启" : "已关闭"}</button>
+      </div>
+    </div>
+
+    ${S.testMode ? `
+    <div class="card">
+      <div class="sectionTitle" style="margin:0 0 8px">工具箱</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn small ghost" id="tCoin">🪙 +1000 金币</button>
+        <button class="btn small ghost" id="tTicket">🎟️ +5 转盘券</button>
+        <button class="btn small ghost" id="tDaily">🔄 重置今日探险</button>
+        <button class="btn small ghost" id="tEssay">✍️ 造一篇待批阅作文</button>
+        <button class="btn small ghost" id="tGems">💎 造 5 件宝物</button>
+        <button class="btn small ghost" id="tReset" style="color:#c04a4a">🗑️ 清空全部进度</button>
+      </div>
+      <div style="font-size:11px;color:#b0997a;margin-top:10px;line-height:1.7">
+        「造一篇待批阅作文」会自动填好一篇，让你立刻验收<b>作文批阅台</b>的完整流程。<br>
+        试玩完记得：先「清空全部进度」，再关掉测试模式。
+      </div>
+    </div>` : ""}
+
+    <div class="card" style="font-size:12.5px;color:#6a5a42;line-height:1.9">
+      <b style="color:#8a6a2a">现在的解锁规则（关掉测试模式后）：</b><br>
+      桂林默认开放 → <b>在一站完成 2 个写作任务，就解锁下一座城</b>。<br>
+      <span style="color:#b0997a">没有任何东西是用金币锁着的——金币只用来在英语App里扭蛋、买皮肤、喂宠物。</span>
+    </div>`;
+
+  $("#tToggle").onclick = () => {
+    S.testMode = !S.testMode; save(); sndCoin();
+    toast(S.testMode ? "🧪 测试模式已开启，12 座城市全部解锁" : "✅ 已关闭，恢复正常闯关", 2200);
+    renderTestMode();
+  };
+  if (S.testMode) {
+    $("#tCoin").onclick = () => { addCoins(1000); toast("已加 1000 金币"); renderTestMode(); };
+    $("#tTicket").onclick = () => { addTicket(5, "测试"); toast("已加 5 张转盘券"); renderTestMode(); };
+    $("#tDaily").onclick = () => {
+      S.daily = defState().daily; save();
+      toast("🔄 今日探险已重置，可以重新做一遍", 2200); renderTestMode();
+    };
+    $("#tEssay").onclick = () => {
+      const e = ESSAYS[0];
+      S.essays[e.id] = {
+        paras: [
+          "如果你想看见会走路的山，那就去桂林。",
+          "桂林的山像一个个绿色的大馒头，一个挨着一个，一直排到天边。江水绿得像一块翡翠。",
+          "桂林米粉更绝。卤水浇上去「滋啦」一声，酸笋的香味直往鼻子里钻，我吸溜一大口，米粉滑得像要从舌头上逃走。",
+          "来吧，我在漓江边等你。记得带上肚子。"
+        ],
+        done: true, score: 0, reviewed: false, comment: ""
+      };
+      save(); sndWin();
+      toast("✍️ 已造一篇作文，去「作文批阅台」验收吧", 2600);
+      renderTestMode();
+    };
+    $("#tGems").onclick = () => {
+      ["桂林的山像一个个绿色的大馒头。", "卤水滋啦一声，香味直往鼻子里钻。", "我蹲下身，拨开草，把石头捏了起来。",
+       "我的心怦怦直跳，手心全是汗。", "天灰蒙蒙的，风把头发吹得乱飞。"].forEach((t, i) => {
+        S.gems.unshift({ txt: t, tool: ["simile", "sense", "action", "heart", "scene"][i], from: "测试", d: todayStr(), stars: 3 });
+      });
+      save(); toast("💎 已造 5 件宝物"); renderTestMode();
+    };
+    let armed = false;
+    $("#tReset").onclick = () => {
+      if (!armed) { armed = true; $("#tReset").textContent = "⚠️ 再点一次确认清空"; return; }
+      const keep = S.testMode;
+      S = defState(); S.testMode = keep; save();
+      updateCoinBox(); sndWin();
+      toast("已清空全部进度", 2000);
+      renderTestMode();
+    };
+  }
+  show("test", "🧪 测试模式");
 }
 
 /* ---------------- ✍️ 作文批阅台（语文后台的灵魂） ---------------- */
