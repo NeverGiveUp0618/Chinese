@@ -1,0 +1,8 @@
+{
+  "name": "learning-app",
+  "private": true,
+  "scripts": {
+    "test": "for f in tests/*.js; do echo \"\n=== $f ===\"; node \"$f\" || exit 1; done"
+  },
+  "devDependencies": { "jsdom": "^24.0.0" }
+}
