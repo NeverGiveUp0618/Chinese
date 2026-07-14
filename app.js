@@ -263,9 +263,13 @@ function renderStop(stop) {
       const tool = TOOLS.find(t => t.id === q.tool);
       const done = st.done.includes(i);
       const stars = st.stars[i] || 0;
+      const gName = { 景: "写景", 物: "状物", 人: "写人", 事: "写事", 食: "美食" }[q.genre] || "";
       return `<div class="card toolCard" data-q="${i}">
         <span class="toolIcon">${tool.icon}</span>
-        <span class="toolName">${tool.name}<span class="toolSub">${done ? "已完成，可以再写一次" : "用「" + tool.short + "」写一句"}</span></span>
+        <span class="toolName">
+          <span class="genreTag g-${q.genre}">${gName}</span>${tool.name}
+          <span class="toolSub">${done ? "已完成，可以再写一次" : "用「" + tool.short + "」写一句"}</span>
+        </span>
         <span class="toolLv">${done ? "★".repeat(stars) + "☆".repeat(3 - stars) : "去写"}</span>
       </div>`;
     }).join("")}`;
@@ -526,9 +530,10 @@ function renderEssayList() {
     ${ESSAYS.map((e, i) => {
       const es = S.essays[e.id];
       const n = es ? (es.paras || []).filter(x => x && x.trim()).length : 0;
+      const badge = es && es.reviewed ? "💌 " + "⭐".repeat(es.score || 0) : es && es.done ? "⏳ 等家长看" : "";
       return `<div class="card toolCard" data-i="${i}">
         <span class="toolIcon">${e.icon}</span>
-        <span class="toolName">${e.title}<span class="toolSub">${e.term} · ${n ? "已写 " + n + "/" + e.outline.length + " 段" : e.hook}</span></span>
+        <span class="toolName">${e.title}<span class="toolSub">${e.term} · ${n ? "已写 " + n + "/" + e.outline.length + " 段" : e.hook}${badge ? "　" + badge : ""}</span></span>
         <span style="font-size:20px;color:#d9a441">▶</span>
       </div>`;
     }).join("")}`;
@@ -537,7 +542,7 @@ function renderEssayList() {
 }
 
 function renderEssayWrite(e) {
-  if (!S.essays[e.id]) S.essays[e.id] = { paras: e.outline.map(() => ""), done: false, score: 0 };
+  if (!S.essays[e.id]) S.essays[e.id] = { paras: e.outline.map(() => ""), done: false, score: 0, reviewed: false, comment: "" };
   const es = S.essays[e.id];
   const gemPool = S.gems.slice(0, 6);
   $("#scr-essayWrite").innerHTML = `
@@ -546,6 +551,13 @@ function renderEssayWrite(e) {
       <div style="font-size:17px;font-weight:800;color:#7a5a2a">${e.title}</div>
       <div style="font-size:12px;color:#b0997a;margin-top:3px">${esc(e.hook)}</div>
     </div>
+    ${es.reviewed && es.comment ? `<div class="cmtCard">
+      <div class="ct">💌 爸爸妈妈的评语　${"⭐".repeat(es.score || 0)}</div>
+      <div class="cb">${esc(es.comment)}</div>
+    </div>` : es.done ? `<div class="cmtCard" style="background:#f7ecd5;border-color:#e5d2ae">
+      <div class="ct" style="color:#a08a6a">⏳ 已交稿，等爸爸妈妈看</div>
+      <div class="cb" style="font-size:13px">拿给他们看一眼吧——他们读完给你写评语，你还能再拿 2 张转盘券。</div>
+    </div>` : ""}
     ${gemPool.length ? `<div class="card" style="padding:12px">
       <div style="font-size:13px;font-weight:700;color:#8a6a2a;margin-bottom:6px">💎 从你的宝库里挑素材用（点一下复制）</div>
       ${gemPool.map((g, i) => `<div class="gem" style="margin-bottom:6px;padding:8px 10px;cursor:pointer" data-g="${i}">
@@ -604,9 +616,28 @@ function renderEssayWrite(e) {
   show("essayWrite", e.title);
 }
 
-/* ================= 家长设置 ================= */
+/* ================= 家长后台 =================
+ * 语文后台和英语最大的不同：必须有「作文批阅台」。
+ * 系统只能判「用没用技巧」，「写得好不好」只有人能给——
+ * 所以家长的评语不是可选项，是这个产品闭环的最后一环。
+ */
 const PARENT_PIN = "223826";
 let parentOK = false;
+
+/* 题材统计：写人/写景/状物/写事/美食 各练了多少次 */
+const GENRES = [["景", "写景"], ["物", "状物"], ["人", "写人"], ["事", "写事"], ["食", "美食"]];
+function genreCount(g) {
+  let n = 0;
+  STOPS.forEach(s => {
+    const st = stopS(s.id);
+    s.quests.forEach((q, i) => { if (q.genre === g && st.done.includes(i)) n++; });
+  });
+  return n;
+}
+function genreTotal(g) {
+  return STOPS.reduce((a, s) => a + s.quests.filter(q => q.genre === g).length, 0);
+}
+
 function renderParent() {
   if (!parentOK) {
     $("#scr-parent").innerHTML = `
@@ -630,35 +661,321 @@ function renderParent() {
   }
   const w = loadWallet();
   const tot = S.gems.length;
-  const byTool = TOOLS.map(t => ({ t, n: S.gems.filter(g => g.tool === t.id).length }));
   const days = Object.keys(S.checkins).length;
+  const pending = ESSAYS.filter(e => { const es = S.essays[e.id]; return es && es.done && !es.reviewed; }).length;
   $("#scr-parent").innerHTML = `
+    ${pending ? `<div class="card" style="background:#fff3d6;text-align:center;padding:12px" id="pendBanner">
+      <div style="font-size:15px;font-weight:800;color:#c07a2c">✍️ 有 ${pending} 篇作文等你批阅！</div>
+      <div style="font-size:12px;color:#a08a6a;margin-top:2px">她写完了，正等着你的评语——点我去看</div>
+    </div>` : ""}
+
     <div class="card">
-      <div class="sectionTitle" style="margin:0 0 8px">📊 学习报告</div>
+      <div class="sectionTitle" style="margin:0 0 8px">📊 总览</div>
       <div style="display:flex;text-align:center">
         <div style="flex:1"><div style="font-size:22px;font-weight:800;color:#c08a2a">${tot}</div><div style="font-size:11px;color:#b0997a">写过的句子</div></div>
         <div style="flex:1"><div style="font-size:22px;font-weight:800;color:#6a9a4a">${doneQuests()}/${totalQuests()}</div><div style="font-size:11px;color:#b0997a">寻宝任务</div></div>
         <div style="flex:1"><div style="font-size:22px;font-weight:800;color:#a06a2a">${days}</div><div style="font-size:11px;color:#b0997a">打卡天数</div></div>
       </div>
     </div>
-    <div class="card">
-      <div class="sectionTitle" style="margin:0 0 6px">🧰 六件法宝的掌握情况</div>
-      ${byTool.map(x => `<div class="taskRow"><span class="tIcon">${x.t.icon}</span><span class="tName">${x.t.name}（${x.t.short}）</span><span class="tProg">${x.n ? "用过 " + x.n + " 次" : "还没用"}</span></div>`).join("")}
+
+    <div class="card actRow" id="pReview">
+      <span style="font-size:26px">✍️</span>
+      <span style="flex:1;font-size:15px;font-weight:800;color:#7a5a2a">作文批阅台
+        <span style="display:block;font-size:12px;color:#b0997a;font-weight:400">读她的作文 · 打分 · 写评语（评语会显示给她看）</span>
+      </span>
+      ${pending ? `<span style="background:#e8842d;color:#fff;border-radius:10px;padding:2px 8px;font-size:12px;font-weight:700">${pending}</span>` : `<span style="font-size:20px;color:#d9a441">▶</span>`}
     </div>
-    <div class="card">
-      <div class="sectionTitle" style="margin:0 0 6px">🪙 共享钱包（和英语App互通）</div>
-      <div style="font-size:13px;color:#6a5a42;line-height:1.8">
-        金币：<b>${w.coins}</b>　转盘券：<b>${w.tickets || 0}</b><br>
-        <span style="font-size:12px;color:#b0997a">语文和英语赚的是同一份金币和转盘券，在英语App的奖励屋里一起用。</span>
+
+    <div class="card actRow" id="pReport">
+      <span style="font-size:26px">📊</span>
+      <span style="flex:1;font-size:15px;font-weight:800;color:#7a5a2a">学习报告
+        <span style="display:block;font-size:12px;color:#b0997a;font-weight:400">五大题材 · 六件法宝 · 7天趋势</span>
+      </span><span style="font-size:20px;color:#d9a441">▶</span>
+    </div>
+
+    <div class="card actRow" id="pGems">
+      <span style="font-size:26px">💎</span>
+      <span style="flex:1;font-size:15px;font-weight:800;color:#7a5a2a">宝库全览 / 导出
+        <span style="display:block;font-size:12px;color:#b0997a;font-weight:400">${tot} 句她自己写的话，可以导出留存</span>
+      </span><span style="font-size:20px;color:#d9a441">▶</span>
+    </div>
+
+    <div class="card actRow" id="pReward">
+      <span style="font-size:26px">🎁</span>
+      <span style="flex:1;font-size:15px;font-weight:800;color:#7a5a2a">奖励与钱包
+        <span style="display:block;font-size:12px;color:#b0997a;font-weight:400">金币 ${w.coins} · 转盘券 ${w.tickets || 0}（与英语App互通）</span>
+      </span><span style="font-size:20px;color:#d9a441">▶</span>
+    </div>
+
+    <div class="card actRow" id="pBackup">
+      <span style="font-size:26px">💾</span>
+      <span style="flex:1;font-size:15px;font-weight:800;color:#7a5a2a">备份与恢复
+        <span style="display:block;font-size:12px;color:#b0997a;font-weight:400">她写的东西只存在这台手机里，务必备份</span>
+      </span><span style="font-size:20px;color:#d9a441">▶</span>
+    </div>
+
+    <div class="card" style="font-size:12.5px;color:#6a5a42;line-height:1.9">
+      <b style="color:#8a6a2a">这个后台最重要的一件事：</b><br>
+      系统只能判断她<b>用没用某个技巧</b>（比喻、五感、动作分解……），<b>但「写得好不好」判不了，也不该判</b>。<br>
+      所以<b>作文批阅台不是可选功能，是这个产品闭环的最后一环</b>。她写完一篇，你读一遍、打个分、写两句话——这两句话比系统给的一百颗星都重。
+    </div>`;
+
+  if (pending) $("#pendBanner").onclick = () => go(renderReview);
+  $("#pReview").onclick = () => go(renderReview);
+  $("#pReport").onclick = () => go(renderReport);
+  $("#pGems").onclick = () => go(renderGemsAdmin);
+  $("#pReward").onclick = () => go(renderReward);
+  $("#pBackup").onclick = () => go(renderBackup);
+  show("parent", "🔐 家长后台");
+}
+
+/* ---------------- ✍️ 作文批阅台（语文后台的灵魂） ---------------- */
+function renderReview() {
+  const written = ESSAYS.filter(e => { const es = S.essays[e.id]; return es && (es.paras || []).some(p => p && p.trim()); });
+  $("#scr-review").innerHTML = `
+    <div class="card" style="padding:12px;font-size:12.5px;color:#6a5a42;line-height:1.8">
+      <b style="color:#8a6a2a">怎么批：</b>先<b>找一句你真心喜欢的</b>说出来（这比指出十个毛病有用），再提<b>一个</b>可以改进的地方。<b>只提一个。</b>
+    </div>
+    ${written.length ? written.map((e, i) => {
+      const es = S.essays[e.id];
+      const len = [...(es.paras || []).join("")].length;
+      const st = es.reviewed ? "已批阅" : es.done ? "⏳ 等你批阅" : "草稿中";
+      return `<div class="card actRow" data-e="${e.id}">
+        <span style="font-size:26px">${e.icon}</span>
+        <span style="flex:1;font-size:15px;font-weight:700;color:#7a5a2a">${e.title}
+          <span style="display:block;font-size:12px;color:#b0997a;font-weight:400">${len} 字 · ${st}${es.reviewed ? "　" + "⭐".repeat(es.score || 0) : ""}</span>
+        </span>
+        <span style="font-size:20px;color:${es.done && !es.reviewed ? "#e8842d" : "#d9a441"}">▶</span>
+      </div>`;
+    }).join("") : `<div class="card" style="text-align:center;color:#b0997a;font-size:14px;padding:26px">她还没写过作文<br>写完后会出现在这里等你批阅 ✍️</div>`}`;
+  $$("#scr-review .actRow").forEach(c => c.onclick = () => go(() => renderReviewOne(c.dataset.e)));
+  show("review", "✍️ 作文批阅台");
+}
+
+function renderReviewOne(eid) {
+  const e = ESSAYS.find(x => x.id === eid);
+  const es = S.essays[eid];
+  const full = (es.paras || []).join("\n");
+  const len = [...full].length;
+  /* 顺手告诉家长：系统检测到她用了哪些技巧（客观事实，供参考，不是评分） */
+  const used = TOOLS.filter(t => judge(full, t.id).hit);
+
+  $("#scr-reviewOne").innerHTML = `
+    <div class="card" style="text-align:center;padding:12px">
+      <div style="font-size:30px">${e.icon}</div>
+      <div style="font-size:17px;font-weight:800;color:#7a5a2a">${e.title}</div>
+      <div style="font-size:12px;color:#b0997a">${e.term} · ${len} 字 · ${(es.paras || []).filter(p => p && p.trim()).length} 段</div>
+    </div>
+
+    <div class="card" style="padding:14px">
+      <div class="sectionTitle" style="margin:0 0 8px">📄 全文</div>
+      ${(es.paras || []).map((p, i) => `
+        <div style="margin-bottom:10px">
+          <div style="font-size:12px;color:#b0997a;font-weight:700">${i + 1}. ${e.outline[i] ? e.outline[i].s : ""}</div>
+          <div style="font-size:14.5px;line-height:1.9;color:#4a3c28;background:#fffdf7;border-radius:10px;padding:9px 11px;margin-top:3px;white-space:pre-wrap">${esc(p || "（这段空着）")}</div>
+        </div>`).join("")}
+    </div>
+
+    <div class="card" style="padding:12px">
+      <div class="sectionTitle" style="margin:0 0 6px">🔍 系统检测到的技巧（客观事实，仅供参考）</div>
+      <div style="font-size:13px;color:#6a5a42;line-height:1.9">
+        ${used.length ? used.map(t => `<span class="gemTag">${t.icon} ${t.short}</span>`).join(" ") : "<span style='color:#b0997a'>这篇里没检测到明显的技巧使用——可以在评语里点一个方向</span>"}
+        <div style="font-size:11px;color:#b0997a;margin-top:6px">⚠️ 这只是「用没用」，不代表「写得好不好」。<b>好不好，只有你能判。</b></div>
       </div>
     </div>
-    <div class="card" style="font-size:12.5px;color:#6a5a42;line-height:1.9">
-      <b style="color:#8a6a2a">给你的三条建议：</b><br>
-      ① <b>周末作文写完后，一定要认真读一遍并给她反馈</b>（哪句最打动你）。系统只能告诉她「用没用技巧」，<b>「写得好不好」只有人能给</b>。<br>
-      ② 她抗拒写作，所以<b>脑洞题不要挑毛病</b>，写了就夸。先让她愿意写。<br>
-      ③ 宝库里的句子都是她自己写的——<b>偶尔翻出来念给她听</b>，比任何表扬都管用。
+
+    <div class="card" style="padding:14px">
+      <div class="sectionTitle" style="margin:0 0 8px">✍️ 你的批阅</div>
+      <div style="font-size:12px;color:#b0997a;margin-bottom:6px">打个分（她会看到）</div>
+      <div style="display:flex;gap:6px;margin-bottom:12px" id="scoreRow">
+        ${[1, 2, 3, 4, 5].map(n => `<button class="btn small ${((es.score || 0) >= n) ? "" : "ghost"}" data-score="${n}" style="flex:1">⭐${n}</button>`).join("")}
+      </div>
+      <div style="font-size:12px;color:#b0997a;margin-bottom:4px">评语（她会在作文页看到你写的话）</div>
+      <textarea id="cmtArea" placeholder="先说一句你真心喜欢的地方……再提一个可以改进的点，只提一个。"
+        style="width:100%;min-height:100px;border:2px solid #e5d2ae;border-radius:12px;padding:10px;font-size:14px;line-height:1.8;font-family:inherit;resize:none;outline:none;background:#fffdf7;color:#4a3c28;user-select:text;-webkit-user-select:text">${esc(es.comment || "")}</textarea>
+      <div style="height:10px"></div>
+      <button class="btn" id="cmtSave">✅ 提交批阅（+ 发 2 张转盘券给她）</button>
     </div>`;
-  show("parent", "🔐 家长设置");
+
+  let score = es.score || 0;
+  const paint = () => {
+    $$("#scoreRow [data-score]").forEach(b => b.classList.toggle("ghost", +b.dataset.score > score));
+  };
+  $$("#scoreRow [data-score]").forEach(b => b.onclick = () => { score = +b.dataset.score; sndCoin(); paint(); });
+
+  $("#cmtSave").onclick = () => {
+    const c = $("#cmtArea").value.trim();
+    if (!score) { toast("先给个分吧（1~5 星）"); return; }
+    if (!c) { toast("写两句评语——这比分数重要得多"); return; }
+    const first = !es.reviewed;
+    es.score = score; es.comment = c; es.reviewed = true; es.reviewedAt = todayStr();
+    save();
+    if (first) { addTicket(2, "作文批阅完成"); addCoins(20); }
+    confetti(); sndWin();
+    toast("✅ 批阅完成！她打开作文时会看到你的评语", 3000);
+    navStack = [renderReview]; renderReview();
+  };
+  show("reviewOne", "✍️ 批阅");
+}
+
+/* ---------------- 📊 学习报告 ---------------- */
+function renderReport() {
+  const byTool = TOOLS.map(t => ({ t, n: S.gems.filter(g => g.tool === t.id).length }));
+  const days = [];
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date(Date.now() - i * 864e5);
+    const k = d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+    days.push({ k, lb: "日一二三四五六"[d.getDay()], n: S.gems.filter(g => g.d === k).length });
+  }
+  const maxN = Math.max(3, ...days.map(d => d.n));
+  $("#scr-report").innerHTML = `
+    <div class="card">
+      <div class="sectionTitle" style="margin:0 0 8px">📚 五大题材（小学作文就考这几类）</div>
+      ${GENRES.map(([g, n]) => {
+        const c = genreCount(g), t = genreTotal(g);
+        return `<div class="careRow" style="display:flex;align-items:center;gap:8px;margin:6px 0">
+          <span style="font-size:12px;color:#7a5a2a;font-weight:700;width:44px">${n}</span>
+          <span style="flex:1;height:10px;background:#f0e6d4;border-radius:6px;overflow:hidden">
+            <span style="display:block;height:100%;width:${t ? c / t * 100 : 0}%;background:linear-gradient(90deg,#ffd166,#e8a33d);border-radius:6px"></span>
+          </span>
+          <span style="font-size:11px;color:#b0997a;width:34px;text-align:right">${c}/${t}</span>
+        </div>`;
+      }).join("")}
+      <div style="font-size:11px;color:#b0997a;margin-top:6px;line-height:1.6">每座城市都覆盖了这五类题材——<b>练完六座城，四大考试题材全练过一遍</b>。</div>
+    </div>
+
+    <div class="card">
+      <div class="sectionTitle" style="margin:0 0 8px">🧰 六件法宝（写作技巧）</div>
+      ${byTool.map(x => `<div class="taskRow"><span class="tIcon">${x.t.icon}</span><span class="tName">${x.t.name}<span style="font-size:11px;color:#b0997a">　${x.t.short}</span></span><span class="tProg">${x.n ? "用过 " + x.n + " 次" : "还没用"}</span></div>`).join("")}
+    </div>
+
+    <div class="card">
+      <div class="sectionTitle" style="margin:0 0 8px">📈 最近 7 天写了多少句</div>
+      <div style="display:flex;align-items:flex-end;gap:6px;height:96px">
+        ${days.map(d => `<div style="flex:1;text-align:center">
+          <div style="font-size:10px;color:#b0997a">${d.n || ""}</div>
+          <div style="height:${Math.max(3, d.n / maxN * 66)}px;border-radius:6px 6px 0 0;background:${d.n ? "linear-gradient(180deg,#ffd166,#e8a33d)" : "#f0e6d4"}"></div>
+          <div style="font-size:11px;color:#b0997a;margin-top:3px">${d.lb}</div>
+        </div>`).join("")}
+      </div>
+    </div>
+
+    <div class="card" style="font-size:12.5px;color:#6a5a42;line-height:1.9">
+      <b style="color:#8a6a2a">怎么看这些数字：</b><br>
+      ① <b>「写了多少句」比「写得多好」重要</b>——她抗拒写作，先看她愿不愿意动笔。<br>
+      ② 哪个法宝「还没用」，就带她去做那个城市的对应任务。<br>
+      ③ 题材条最短的那一类，就是她最不擅长的——但<b>别急着补短板</b>，先把她喜欢的写透。
+    </div>`;
+  show("report", "📊 学习报告");
+}
+
+/* ---------------- 💎 宝库全览 / 导出 ---------------- */
+function renderGemsAdmin() {
+  const gs = S.gems;
+  $("#scr-gemsAdmin").innerHTML = `
+    <div class="card" style="padding:12px;font-size:12.5px;color:#6a5a42;line-height:1.8">
+      这 ${gs.length} 句话<b>全是她自己写的</b>。这是她的成长档案——<b>偶尔翻出来念给她听，比任何表扬都管用。</b>
+    </div>
+    <button class="btn" id="gExport">📋 全部复制（可以存到微信收藏）</button>
+    <div style="height:12px"></div>
+    ${gs.length ? gs.map(g => {
+      const t = TOOLS.find(x => x.id === g.tool);
+      return `<div class="gem">
+        <div class="gemTxt">${esc(g.txt)}</div>
+        <div class="gemMeta">
+          <span><span class="gemTag">${t ? t.icon + " " + t.short : "💡 脑洞"}</span>　${esc(g.from)}</span>
+          <span>${"⭐".repeat(g.stars || 1)}　${g.d}</span>
+        </div>
+      </div>`;
+    }).join("") : `<div class="card" style="text-align:center;color:#b0997a;padding:26px">还没有宝物</div>`}`;
+  $("#gExport").onclick = () => {
+    const txt = gs.map(g => `【${g.from}】${g.txt}　（${g.d}）`).join("\n\n");
+    if (navigator.clipboard) navigator.clipboard.writeText(txt).then(() => toast("✅ 已复制 " + gs.length + " 句")).catch(() => toast("复制失败，长按下面的文字手动复制"));
+    else toast("这个浏览器不支持一键复制");
+  };
+  show("gemsAdmin", "💎 宝库全览");
+}
+
+/* ---------------- 🎁 奖励与钱包 ---------------- */
+function renderReward() {
+  const w = loadWallet();
+  $("#scr-reward").innerHTML = `
+    <div class="card">
+      <div class="sectionTitle" style="margin:0 0 8px">🪙 共享钱包</div>
+      <div style="display:flex;text-align:center">
+        <div style="flex:1"><div style="font-size:24px;font-weight:800;color:#c08a2a">${w.coins}</div><div style="font-size:11px;color:#b0997a">金币</div></div>
+        <div style="flex:1"><div style="font-size:24px;font-weight:800;color:#e8842d">${w.tickets || 0}</div><div style="font-size:11px;color:#b0997a">转盘券</div></div>
+      </div>
+      <div style="font-size:12px;color:#b0997a;margin-top:8px;line-height:1.7">
+        <b>语文和英语共用同一份金币和转盘券</b>，喂同一只宠物。转盘在英语App的奖励屋里，一天只能转一次（要先完成当天的学习和复习）。
+      </div>
+    </div>
+    <div class="card">
+      <div class="sectionTitle" style="margin:0 0 8px">🎁 手动发奖励</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn small ghost" id="rT1">🎟️ 发 1 张转盘券</button>
+        <button class="btn small ghost" id="rC50">🪙 发 50 金币</button>
+      </div>
+      <div style="font-size:11px;color:#b0997a;margin-top:8px">她表现特别好的时候，可以手动奖励。</div>
+    </div>
+    <div class="card" style="font-size:12.5px;color:#6a5a42;line-height:1.9">
+      <b style="color:#8a6a2a">语文这边她怎么赚奖励：</b><br>
+      · 完成一个寻宝任务：金币（按星级）<br>
+      · 写一个脑洞：金币（只看敢不敢写，不挑毛病）<br>
+      · 完成今日探险（三件事）：20 金币 + 1 张转盘券<br>
+      · <b>写完一整篇作文：30 金币 + 2 张转盘券</b><br>
+      · <b>你批阅完一篇作文：再 + 2 张转盘券</b>（所以她会催你看）
+    </div>`;
+  $("#rT1").onclick = () => { addTicket(1, "爸爸妈妈的奖励"); toast("已发 1 张转盘券"); renderReward(); };
+  $("#rC50").onclick = () => { addCoins(50); toast("已发 50 金币"); renderReward(); };
+  show("reward", "🎁 奖励与钱包");
+}
+
+/* ---------------- 💾 备份与恢复 ---------------- */
+function exportCode() {
+  try { return btoa(unescape(encodeURIComponent(JSON.stringify(S)))); } catch (e) { return ""; }
+}
+function importCode(code) {
+  try {
+    const obj = JSON.parse(decodeURIComponent(escape(atob(code.trim()))));
+    if (!obj || !obj.gems) return false;
+    S = Object.assign(defState(), obj);
+    save(); return true;
+  } catch (e) { return false; }
+}
+function renderBackup() {
+  const code = exportCode();
+  $("#scr-backup").innerHTML = `
+    <div class="card">
+      <div class="sectionTitle" style="margin:0 0 6px">💾 备份</div>
+      <div style="font-size:12px;color:#b0997a;margin-bottom:8px">
+        她写的<b>每一句话</b>都只存在这台手机里。清缓存、换手机就全没了——<b>那是她的作品，丢了很伤人。</b>复制下面这串码存到微信收藏。
+      </div>
+      <textarea id="bkOut" readonly style="width:100%;height:80px;border:2px solid #e5d2ae;border-radius:12px;padding:8px;font-size:11px;background:#fffdf7;color:#6a5a42;resize:none">${esc(code)}</textarea>
+      <div style="height:8px"></div>
+      <button class="btn small" id="bkCopy">📋 复制备份码</button>
+      <span style="font-size:11px;color:#b0997a;margin-left:8px">${(code.length / 1024).toFixed(1)} KB</span>
+    </div>
+    <div class="card">
+      <div class="sectionTitle" style="margin:0 0 6px">📥 恢复</div>
+      <div style="font-size:12px;color:#b0997a;margin-bottom:8px">粘贴备份码，会<b style="color:#c04a4a">覆盖</b>当前进度。</div>
+      <textarea id="bkIn" placeholder="粘贴备份码……" style="width:100%;height:80px;border:2px solid #e5d2ae;border-radius:12px;padding:8px;font-size:11px;background:#fffdf7;color:#6a5a42;resize:none;user-select:text;-webkit-user-select:text"></textarea>
+      <div style="height:8px"></div>
+      <button class="btn small ghost" id="bkGo">📥 恢复</button>
+    </div>`;
+  $("#bkCopy").onclick = () => {
+    const t = $("#bkOut"); t.select();
+    if (navigator.clipboard) navigator.clipboard.writeText(code).then(() => toast("✅ 已复制")).catch(() => toast("长按文字手动复制"));
+  };
+  let armed = false;
+  $("#bkGo").onclick = () => {
+    const v = $("#bkIn").value.trim();
+    if (!v) { toast("先粘贴备份码"); return; }
+    if (!armed) { armed = true; $("#bkGo").textContent = "⚠️ 会覆盖当前进度，再点确认"; return; }
+    if (importCode(v)) { confetti(); sndWin(); toast("🎉 已恢复"); navStack = [renderHome]; renderHome(); }
+    else { toast("备份码不对"); armed = false; $("#bkGo").textContent = "📥 恢复"; }
+  };
+  show("backup", "💾 备份与恢复");
 }
 
 /* ================= 启动 ================= */
