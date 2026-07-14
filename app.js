@@ -309,13 +309,17 @@ function renderMap() {
     <div style="font-size:12px;color:#8a6a2a;text-align:center;margin:4px 0 10px">三条路线任选一条，今天想去哪儿由你决定</div>
     ${ROUTES.map(route => `<div class="routeChapter" data-route="${route.id}">
       <div class="routeTitle"><span>${route.icon}</span><span>${route.name}<small>${route.sub}</small></span></div>
-      <div class="adventureMap">
-      <div class="mapScenery"><span>🌲</span><span>☁️</span><span>🎁</span></div>
+      <div class="adventureMap ${route.id === "history" ? "historyMap" : ""}">
+      ${route.id === "history" ? `<div class="historyWash"></div>
+        <svg class="historyRoad" viewBox="0 0 100 600" preserveAspectRatio="none" aria-hidden="true"><path d="M26 72 C72 105 78 155 68 190 S25 245 29 300 S78 354 71 411 S27 475 37 535"/></svg>
+        <div class="historyDecor gate">🏯<small>穿过城门</small></div><div class="historyDecor tower">🗼</div>
+        <div class="historyDecor scroll">📜</div><div class="historyDecor river">〰️〰️</div>
+        <div class="historyDecor school">🏛️<small>古城书院</small></div><div class="historyCloud">☁️</div>` : `<div class="mapScenery"><span>🌲</span><span>☁️</span><span>🎁</span></div>`}
       ${route.stops.map((id, ri) => {
       const i = STOPS.findIndex(x => x.id === id), s = STOPS[i];
       const st = stopS(s.id), open = stopUnlocked(i);
       const n = st.done.length, tot = s.quests.length;
-      return `<div class="routeStop ${ri % 2 ? "right" : "left"} ${open ? "" : "locked"} ${n === tot ? "done" : ""}">
+      return `<div class="routeStop ${route.id === "history" ? `historyStop step-${ri}` : ""} ${ri % 2 ? "right" : "left"} ${open ? "" : "locked"} ${n === tot ? "done" : ""}">
         <span class="routeDot"></span>
         <div class="card stopCard ${open ? "" : "locked"}" data-i="${i}">
           <div class="stopIcon">${open ? s.icon : "🔒"}</div>
@@ -327,7 +331,7 @@ function renderMap() {
         </div>
       </div>`;
     }).join("")}
-      <div class="mapScenery"><span>🧭</span><span>✨</span><span>${route.icon}</span></div>
+      ${route.id === "history" ? `<div class="historyLegend">漫画古都长卷 · 沿着时光路去寻宝</div>` : `<div class="mapScenery"><span>🧭</span><span>✨</span><span>${route.icon}</span></div>`}
     </div></div>`).join("")}`;
   $$("#scr-map .stopCard").forEach(c => {
     c.onclick = () => {

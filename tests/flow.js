@@ -36,6 +36,8 @@ const ok = (c, m) => { c ? pass++ : fail++; console.log(`  ${c ? "✓" : "✗ FA
   ok($("#scr-map").textContent.includes("非地理比例地图"), "★ 明确标注为游戏路线，不冒充地理地图");
   ok(["南京", "苏州", "开封", "广州"].every(n => $("#scr-map").textContent.includes(n)), "★ 四座新城市出现在路线图");
   ok($$("#scr-map .routeChapter").length === 3, "★ 三条主题路线可选");
+  ok(!!$("#scr-map [data-route='history'] .historyMap") && !!$("#scr-map .historyRoad"), "★ 古都时光线改成有蜿蜒道路的漫画长卷地图");
+  ok($$("#scr-map [data-route='history'] .historyStop").length === 5 && $$("#scr-map [data-route='history'] .historyDecor").length >= 5, "★ 五座古都分布在城门、古塔、河流和书院场景中");
   const cardOf = name => stops.find(c => c.textContent.includes(name));
   ok(["桂林", "北京", "敦煌"].every(n => !cardOf(n).classList.contains("locked")), "★ 三条路线首站都默认解锁");
   ok(cardOf("厦门").classList.contains("locked"), "路线内的下一站仍需闯关解锁");
