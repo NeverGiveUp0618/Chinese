@@ -577,44 +577,53 @@ function renderIdea() {
       <div style="font-size:16px;font-weight:800;color:#7a5a2a;line-height:1.6;margin-top:6px">${esc(idea.q)}</div>
       <div style="font-size:12px;color:#b0997a;margin-top:6px">随便写！<b>没有对错，没人给你挑毛病。</b></div>
     </div>
-    <div id="micTip">💡 懒得打字就用键盘的<b>麦克风</b>说出来，说完自动变文字。</div>
-    <textarea id="writeArea" placeholder="想到什么就写什么……"></textarea>
-    <div id="writeMeta"><span id="wCount">0 字</span><button class="btn ghost small" id="iSwap">🔄 换一个题目</button></div>
-    <button class="btn" id="iGo">${BUDDY.e} 写完啦</button>
-    <div style="height:12px"></div>
-    <div id="judgeBox"></div>`;
-  const ta = $("#writeArea");
-  ta.oninput = () => { $("#wCount").textContent = [...ta.value.trim()].length + " 字"; };
+    <button class="btn" id="iStart">✏️ 想到什么就写什么</button>
+    <div style="height:8px"></div>
+    <button class="btn ghost" id="iSwap">🔄 换一个脑洞</button>
+    <div id="ideaEditor"></div>`;
   $("#iSwap").onclick = () => renderIdea();
-  $("#iGo").onclick = () => {
-    const text = ta.value.trim();
-    const r = judgeIdea(text);
-    if (r.tooShort) {
-      $("#judgeBox").innerHTML = `<div class="jCard"><div class="jTop"><span class="jBuddy">${BUDDY.e}</span>
-        <div><div class="jTitle">${r.title}</div><div style="font-size:13px;color:#8a7a5a">${r.msg}</div></div></div></div>`;
-      sndSoft(); return;
-    }
-    $("#judgeBox").innerHTML = `
-      <div class="jCard">
-        <div class="jTop"><span class="jBuddy">${BUDDY.e}</span>
-          <div style="flex:1"><div class="jTitle">${r.title}</div><div class="jStars">${"⭐".repeat(r.stars)}${"☆".repeat(3 - r.stars)}</div></div>
-        </div>
-        <div class="jSay">「${esc(pick(BUDDY.praise))}」</div>
-        <div class="jDetail">✅ 写了 ${r.len} 个字。<b>脑洞题不挑毛病</b>——敢写，就是最大的本事。</div>
-        <div style="height:12px"></div>
-        <button class="btn" id="iSave">💎 收进宝库</button>
-      </div>`;
-    sndGood(); if (r.stars === 3) confetti(12);
-    $("#iSave").onclick = () => {
-      S.gems.unshift({ txt: text, tool: "idea", from: "脑洞", d: todayStr(), stars: r.stars });
-      save(); bump("ideas"); bump("gems");
-      addCoins(r.stars * 5 + 5);
-      toast("💎 收进宝库啦！", 1600);
-      renderIdea();
+  $("#iStart").onclick = () => {
+    $("#iStart").remove();
+    $("#iSwap").remove();
+    $("#ideaEditor").innerHTML = `
+      <div id="micTip">💡 懒得打字就用键盘的<b>麦克风</b>说出来，说完自动变文字。</div>
+      <textarea id="writeArea" placeholder="想到什么就写什么……"></textarea>
+      <div id="writeMeta"><span id="wCount">0 字</span><button class="btn ghost small" id="iSwap">🔄 换一个题目</button></div>
+      <button class="btn" id="iGo">${BUDDY.e} 写完啦</button>
+      <div style="height:12px"></div><div id="judgeBox"></div>`;
+    const ta = $("#scr-idea #writeArea");
+    ta.oninput = () => { $("#scr-idea #wCount").textContent = [...ta.value.trim()].length + " 字"; };
+    $("#scr-idea #iSwap").onclick = () => renderIdea();
+    $("#scr-idea #iGo").onclick = () => {
+      const text = ta.value.trim();
+      const r = judgeIdea(text);
+      if (r.tooShort) {
+        $("#scr-idea #judgeBox").innerHTML = `<div class="jCard"><div class="jTop"><span class="jBuddy">${BUDDY.e}</span>
+          <div><div class="jTitle">${r.title}</div><div style="font-size:13px;color:#8a7a5a">${r.msg}</div></div></div></div>`;
+        sndSoft(); return;
+      }
+      $("#scr-idea #judgeBox").innerHTML = `
+        <div class="jCard">
+          <div class="jTop"><span class="jBuddy">${BUDDY.e}</span>
+            <div style="flex:1"><div class="jTitle">${r.title}</div><div class="jStars">${"⭐".repeat(r.stars)}${"☆".repeat(3 - r.stars)}</div></div>
+          </div>
+          <div class="jSay">「${esc(pick(BUDDY.praise))}」</div>
+          <div class="jDetail">✅ 写了 ${r.len} 个字。<b>脑洞题不挑毛病</b>——敢写，就是最大的本事。</div>
+          <div style="height:12px"></div>
+          <button class="btn" id="iSave">💎 收进宝库</button>
+        </div>`;
+      sndGood(); if (r.stars === 3) confetti(12);
+      $("#scr-idea #iSave").onclick = () => {
+        S.gems.unshift({ txt: text, tool: "idea", from: "脑洞", d: todayStr(), stars: r.stars });
+        save(); bump("ideas"); bump("gems");
+        addCoins(r.stars * 5 + 5);
+        toast("💎 收进宝库啦！", 1600);
+        renderIdea();
+      };
     };
+    ta.focus(); // 只在孩子主动点“开始写”后弹出手机键盘
   };
   show("idea", "💡 脑洞任务");
-  setTimeout(() => ta.focus(), 200);
 }
 
 /* ================= 六件法宝 ================= */

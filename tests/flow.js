@@ -105,12 +105,15 @@ const ok = (c, m) => { c ? pass++ : fail++; console.log(`  ${c ? "✓" : "✗ FA
   $$(".tab").find(t => t.dataset.tab === "idea").click();
   ok($("#scr-idea").classList.contains("on"), "脑洞页显示");
   ok($("#scr-idea").innerHTML.includes("没有对错"), "★ 明确告诉她「没有对错，没人挑毛病」");
+  ok(!$("#scr-idea #writeArea") && !!$("#iStart"), "★ 先完整看脑洞题目，不立刻显示输入框和键盘");
   ok(!!$("#iSwap"), "可以换题目");
-  $("#writeArea").value = "李白秒回我：这月亮拍得不错，但没我床前那个亮。然后他连发九张月亮照片。";
+  $("#iStart").click();
+  ok(!!$("#scr-idea #writeArea") && w.document.activeElement === $("#scr-idea #writeArea"), "★ 点「想到什么就写什么」后才出现输入框并聚焦");
+  $("#scr-idea #writeArea").value = "李白秒回我：这月亮拍得不错，但没我床前那个亮。然后他连发九张月亮照片。";
   $("#iGo").click();
   await sleep(50);
-  ok($("#judgeBox").innerHTML.includes("不挑毛病"), "★ 脑洞只夸不批评");
-  ok($("#judgeBox").innerHTML.includes("⭐"), "有星星奖励");
+  ok($("#scr-idea #judgeBox").innerHTML.includes("不挑毛病"), "★ 脑洞只夸不批评");
+  ok($("#scr-idea #judgeBox").innerHTML.includes("⭐"), "有星星奖励");
   $("#iSave").click();
   await sleep(50);
   ok(S().gems.length === 2, "脑洞也进宝库");
