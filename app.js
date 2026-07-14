@@ -27,6 +27,7 @@ function defState() {
     tools: {},      // toolId -> {learned:bool, used:n, best:0}
     gems: [],       // 宝库：{txt, tool, from, d}
     remixes: [],    // 宝物变身记录：{from,tool,d,hit}，只记是否用了技巧，不评好坏
+    gear: { head: "", hand: "", back: "" }, // 小獾探险装备：只解锁，不磨损、不降级
     essays: {},     // essayId -> {paras:[], done:bool, score:0}
     checkins: {},
     testMode: false // 家长测试模式：全部解锁，给孩子用前记得关掉
@@ -34,6 +35,7 @@ function defState() {
 }
 let S = defState();
 try { const raw = localStorage.getItem(LS_KEY); if (raw) S = Object.assign(defState(), JSON.parse(raw)); } catch (e) {}
+S.gear = Object.assign(defState().gear, S.gear || {});
 if (S.daily.date !== todayStr()) S.daily = defState().daily;
 function save() { try { localStorage.setItem(LS_KEY, JSON.stringify(S)); } catch (e) {} }
 
@@ -145,6 +147,23 @@ function stopUnlocked(i) {
 }
 function totalQuests() { return STOPS.reduce((a, s) => a + s.quests.length, 0); }
 function doneQuests() { return STOPS.reduce((a, s) => a + stopS(s.id).done.length, 0); }
+function hasStamp(stopId) { return stopS(stopId).done.length >= 2; }
+function stampCount() { return STOPS.filter(s => hasStamp(s.id)).length; }
+function hasRouteMedal(route) { return route.stops.every(id => hasStamp(id)); }
+function medalCount() { return ROUTES.filter(hasRouteMedal).length; }
+const GEARS = [
+  { id: "compass", slot: "hand", icon: "🧭", name: "小指南针", need: 1, say: "获得 1 枚城市章" },
+  { id: "backpack", slot: "back", icon: "🎒", name: "寻宝背包", need: 2, say: "获得 2 枚城市章" },
+  { id: "hat", slot: "head", icon: "🤠", name: "探险帽", need: 3, say: "获得 3 枚城市章" },
+  { id: "camera", slot: "hand", icon: "📷", name: "旅行相机", need: 5, say: "获得 5 枚城市章" },
+  { id: "crown", slot: "head", icon: "👑", name: "寻宝队长冠", need: 10, say: "获得 10 枚城市章" },
+  { id: "tent", slot: "back", icon: "⛺", name: "星空帐篷", medals: 1, say: "集齐 1 条路线勋章" }
+];
+function gearOpen(g) { return g.medals ? medalCount() >= g.medals : stampCount() >= g.need; }
+function buddyAvatar(id) {
+  const gear = S.gear || {}, head = GEARS.find(g => g.id === gear.head), hand = GEARS.find(g => g.id === gear.hand), back = GEARS.find(g => g.id === gear.back);
+  return `<div class="buddyAvatar" id="${id || "buddyE"}">${back ? `<span class="buddyGear back">${back.icon}</span>` : ""}<span class="buddyBody">${BUDDY.e}</span>${head ? `<span class="buddyGear head">${head.icon}</span>` : ""}${hand ? `<span class="buddyGear hand">${hand.icon}</span>` : ""}</div>`;
+}
 
 /* ---------------- 每日任务 ---------------- */
 function taskDone() {
@@ -163,7 +182,7 @@ function checkTasks() {
     S.checkins[todayStr()] = 1;
     save();
     addCoins(20); confetti(); sndWin();
-    setTimeout(() => toast("🔥 今天的探险完成！连续 " + S.streak + " 天！", 2800), 300);
+    setTimeout(() => toast("🔥 今天的探险完成！累计探索 " + Object.keys(S.checkins).length + " 天！", 2800), 300);
     addTicket(1, "完成今日探险");
   }
   save();
@@ -178,11 +197,14 @@ function renderHome() {
   const d = taskDone();
   const learned = TOOLS.filter(t => toolS(t.id).learned).length;
   const nextStop = STOPS.find((s, i) => stopUnlocked(i) && stopS(s.id).done.length < s.quests.length) || STOPS[0];
+  const nextStamp = STOPS.find((s, i) => stopUnlocked(i) && !hasStamp(s.id));
+  const target = !d.t1 ? "再完成 1 个寻宝任务，就向今日盖章前进一步" : !d.t2 ? "再写 1 个脑洞，今天就快完成啦" : !d.t3 ? "再收进 1 句宝物，就能盖今日探险章" : "今日探险章已到手，转盘券已送到共享钱包";
+  const stampTarget = nextStamp ? `${nextStamp.icon} ${nextStamp.name}还差 ${2 - stopS(nextStamp.id).done.length} 题获得城市章` : "16 枚城市章已经全部收入护照！";
   $("#scr-home").innerHTML = `
     ${S.testMode ? `<div class="card" id="testBanner" style="background:#fff3d6;text-align:center;padding:10px;font-size:13px;font-weight:700;color:#c07a2c">🧪 测试模式开启中（全部城市已解锁）· 点我关闭</div>` : ""}
     <div class="card" id="buddyCard">
-      <div style="position:absolute;top:12px;left:12px;background:#fff3d6;color:#c07a2c;font-size:12px;font-weight:700;border-radius:12px;padding:3px 9px">🔥 ${S.streak} 天</div>
-      <div id="buddyE">${BUDDY.e}</div>
+      <div style="position:absolute;top:12px;left:12px;background:#fff3d6;color:#c07a2c;font-size:12px;font-weight:700;border-radius:12px;padding:3px 9px">📔 累计 ${Object.keys(S.checkins || {}).length} 天</div>
+      ${buddyAvatar("buddyE")}
       <div style="font-size:15px;font-weight:800;color:#7a5a2a">${BUDDY.name}（你的搭档）</div>
       <div id="buddySay">${esc(pick([
         "今天去哪儿寻宝？我背包都收拾好了！",
@@ -197,6 +219,10 @@ function renderHome() {
       <div class="taskRow ${d.t1 ? "done" : ""}"><span class="tIcon">🔍</span><span class="tName">完成 1 个寻宝任务</span><span class="tProg">${Math.min(S.daily.quests, 1)}/1</span></div>
       <div class="taskRow ${d.t2 ? "done" : ""}"><span class="tIcon">💡</span><span class="tName">写 1 个脑洞（随便写！）</span><span class="tProg">${Math.min(S.daily.ideas, 1)}/1</span></div>
       <div class="taskRow ${d.t3 ? "done" : ""}"><span class="tIcon">💎</span><span class="tName">往宝库存 1 句好句子</span><span class="tProg">${Math.min(S.daily.gems, 1)}/1</span></div>
+    </div>
+
+    <div class="card nextPrize" id="goPassport">
+      <div class="nextPrizeIcon">📔</div><div style="flex:1"><b>下一份收获</b><small>${target}</small><small>${stampTarget}</small></div><span>▶</span>
     </div>
 
     <button class="btn" id="goNext">🗺️ 继续寻宝：${nextStop.icon} ${nextStop.name} →</button>
@@ -220,12 +246,56 @@ function renderHome() {
   $("#goGems").onclick = () => go(renderGems);
   $("#goTools").onclick = () => go(renderTools);
   $("#goEssay").onclick = () => go(renderEssayList);
+  $("#goPassport").onclick = () => go(renderPassport);
   $("#parentLink").onclick = () => go(renderParent);
   if (S.testMode) $("#testBanner").onclick = () => {
     S.testMode = false; save(); toast("✅ 测试模式已关闭，恢复正常闯关", 2200); renderHome();
   };
   show("home", "🏕️ 探险营地");
   updateCoinBox();
+}
+
+/* ================= 探险护照：打卡、城市章、路线勋章、装备 ================= */
+function renderPassport() {
+  const now = new Date(), y = now.getFullYear(), m = now.getMonth();
+  const first = new Date(y, m, 1).getDay(), days = new Date(y, m + 1, 0).getDate();
+  const cells = Array(first).fill("").concat(Array.from({ length: days }, (_, i) => i + 1));
+  const totalDays = Object.keys(S.checkins || {}).length;
+  $("#scr-passport").innerHTML = `
+    <div class="card passportHero">
+      <div style="font-size:40px">📔</div><div><b>小獾探险护照</b><small>写过的每一天都算数，漏一天也不会扣掉任何成果</small></div>
+    </div>
+    <div class="passportStats"><div><b>${totalDays}</b><small>累计探险日</small></div><div><b>${stampCount()}/16</b><small>城市纪念章</small></div><div><b>${medalCount()}/3</b><small>路线勋章</small></div></div>
+
+    <div class="sectionTitle">🗓️ ${y} 年 ${m + 1} 月探险记录</div>
+    <div class="card calendar">
+      ${["日","一","二","三","四","五","六"].map(x => `<span class="week">${x}</span>`).join("")}
+      ${cells.map(day => {
+        if (!day) return `<span></span>`;
+        const key = `${y}-${String(m + 1).padStart(2,"0")}-${String(day).padStart(2,"0")}`;
+        return `<span class="day ${S.checkins[key] ? "checked" : ""} ${key === todayStr() ? "today" : ""}">${day}${S.checkins[key] ? "<i>🔥</i>" : ""}</span>`;
+      }).join("")}
+    </div>
+
+    <div class="sectionTitle">🏅 城市纪念章</div>
+    <div class="stampGrid">${STOPS.map(s => `<div class="stamp ${hasStamp(s.id) ? "earned" : ""}"><span>${hasStamp(s.id) ? s.icon : "◌"}</span><b>${s.name}</b><small>${hasStamp(s.id) ? "完成 2 题 · 已盖章" : `${stopS(s.id).done.length}/2 题`}</small></div>`).join("")}</div>
+
+    <div class="sectionTitle">🗺️ 路线勋章</div>
+    <div class="medalRow">${ROUTES.map(r => `<div class="routeMedal ${hasRouteMedal(r) ? "earned" : ""}"><span>${hasRouteMedal(r) ? r.icon : "🔒"}</span><b>${r.name}</b><small>${r.stops.filter(hasStamp).length}/${r.stops.length} 城市章</small></div>`).join("")}</div>
+
+    <div class="sectionTitle">🎒 给小獾换探险装备</div>
+    <div class="card outfitPreview">${buddyAvatar("passportBuddy")}<div><b>${BUDDY.name}准备出发！</b><small>装备一旦解锁就永久保留，不会损坏，也不会因为没打卡而消失。</small></div></div>
+    <div class="gearGrid">${GEARS.map(g => {
+      const open = gearOpen(g), on = S.gear[g.slot] === g.id;
+      return `<button class="gearItem ${open ? "open" : "locked"} ${on ? "on" : ""}" data-gear="${g.id}"><span>${open ? g.icon : "🔒"}</span><b>${g.name}</b><small>${on ? "使用中 · 点按取下" : open ? "已解锁 · 点按装备" : g.say}</small></button>`;
+    }).join("")}</div>`;
+  $$("#scr-passport .gearItem").forEach(b => b.onclick = () => {
+    const g = GEARS.find(x => x.id === b.dataset.gear);
+    if (!gearOpen(g)) { toast(`再探索一下：${g.say}就能解锁～`, 2200); return; }
+    S.gear[g.slot] = S.gear[g.slot] === g.id ? "" : g.id;
+    save(); sndGood(); renderPassport();
+  });
+  show("passport", "📔 探险护照");
 }
 
 /* ================= 寻宝地图 ================= */
@@ -458,6 +528,7 @@ function renderJudge(r, text, tool, q, stop, qi) {
 
   const finish = () => {
     const st = stopS(stop.id);
+    const route = routeOf(stop.id), hadStamp = hasStamp(stop.id), hadMedal = route ? hasRouteMedal(route) : false;
     const first = !st.done.includes(qi);
     if (first) st.done.push(qi);
     st.stars[qi] = Math.max(st.stars[qi] || 0, r.stars);
@@ -468,7 +539,7 @@ function renderJudge(r, text, tool, q, stop, qi) {
     if (first) bump("quests");
     bump("gems");
     addCoins(r.stars * 5 + (first ? 5 : 0));
-    renderDone(r, tool, stop);
+    renderDone(r, tool, stop, !hadStamp && hasStamp(stop.id), route && !hadMedal && hasRouteMedal(route));
   };
   if (r.hit) {
     $("#jSave").onclick = finish;
@@ -479,16 +550,19 @@ function renderJudge(r, text, tool, q, stop, qi) {
   }
 }
 
-function renderDone(r, tool, stop) {
+function renderDone(r, tool, stop, newStamp, newMedal) {
   $("#scr-done").innerHTML = `
     <div id="doneStars">${"⭐".repeat(r.stars) || "💪"}</div>
     <div id="doneTitle">${r.hit ? "宝物到手！" : "写出来就是胜利！"}</div>
     <div id="doneMsg">${BUDDY.e} 「${esc(r.hit ? pick(BUDDY.praise) : pick(BUDDY.push))}」<br>
-      这句已经存进你的<b>宝库</b>，写作文的时候可以直接拿来用。</div>
+      这句已经存进你的<b>宝库</b>，写作文的时候可以直接拿来用。
+      ${newStamp ? `<div class="newAward">${stop.icon} ${stop.name}城市纪念章到手！</div>` : ""}
+      ${newMedal ? `<div class="newAward">🏅 ${routeOf(stop.id).name}勋章集齐！</div>` : ""}</div>
     <div id="doneCoins">+${r.stars * 5 + 5} 🪙</div>
     <button class="btn" id="dNext">继续寻宝 →</button>
     <div style="height:10px"></div>
     <button class="btn ghost" id="dGems">💎 看看我的宝库</button>`;
+  if (newStamp || newMedal) { confetti(20); sndWin(); }
   $("#dNext").onclick = () => { navStack = [() => renderStop(stop)]; renderStop(stop); };
   $("#dGems").onclick = () => go(renderGems);
   show("done", "🎉 收获");
@@ -1077,6 +1151,12 @@ function renderReport() {
     <div class="card">
       <div class="sectionTitle" style="margin:0 0 8px">🧰 六件法宝（写作技巧）</div>
       ${byTool.map(x => `<div class="taskRow"><span class="tIcon">${x.t.icon}</span><span class="tName">${x.t.name}<span style="font-size:11px;color:#b0997a">　${x.t.short}</span></span><span class="tProg">${x.n ? "用过 " + x.n + " 次" : "还没用"}</span></div>`).join("")}
+    </div>
+
+    <div class="card">
+      <div class="sectionTitle" style="margin:0 0 6px">📔 探险成长</div>
+      <div style="font-size:13px;color:#6a5a42;line-height:1.8">累计探险 <b>${Object.keys(S.checkins || {}).length}</b> 天 · 城市纪念章 <b>${stampCount()}/16</b> · 路线勋章 <b>${medalCount()}/3</b></div>
+      <div style="font-size:11px;color:#b0997a;margin-top:4px">不设断签惩罚；过去写下的每一天、每枚章和每件装备都永久保留。</div>
     </div>
 
     <div class="card">

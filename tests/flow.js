@@ -120,6 +120,26 @@ const ok = (c, m) => { c ? pass++ : fail++; console.log(`  ${c ? "✓" : "✗ FA
   ok(S().streak === 1, "连续天数 = 1");
   ok(!!S().checkins[w.eval("todayStr()")], "今天已打卡");
 
+  console.log("— 📔 探险护照（看得见的长期成长）—");
+  w.eval("navStack=[renderHome];renderHome();");
+  ok($("#scr-home").textContent.includes("累计 1 天"), "★ 首页展示累计探险，不用断签归零刺激孩子");
+  ok(!!$("#goPassport") && $("#goPassport").textContent.includes("下一份收获"), "★ 首页直接告诉孩子下一份收获是什么");
+  $("#goPassport").click();
+  ok($("#scr-passport").classList.contains("on"), "进入探险护照");
+  ok($$("#scr-passport .calendar .day.checked").length === 1, "★ 今日完成后在月历盖章");
+  ok($("#scr-passport").textContent.includes("漏一天也不会扣掉任何成果"), "★ 明确没有断签惩罚");
+  ok($$("#scr-passport .stamp").length === 16 && $$("#scr-passport .routeMedal").length === 3, "16枚城市章和3枚路线勋章都有位置");
+  w.eval("S.stops.guilin.done.push(1);save();renderPassport();");
+  ok($$("#scr-passport .stamp.earned").length === 1 && $("#scr-passport").textContent.includes("桂林"), "★ 每站完成2题自动获得城市纪念章");
+  ok($("#scr-passport [data-gear='compass']").classList.contains("open"), "★ 城市章会永久解锁小獾装备");
+  $("#scr-passport [data-gear='compass']").click();
+  ok(S().gear.hand === "compass" && $("#passportBuddy").textContent.includes("🧭"), "★ 装上指南针后立即显示");
+  w.eval("ROUTES[0].stops.forEach(id=>S.stops[id]={read:true,done:[0,1],stars:{0:3,1:3}});save();renderPassport();");
+  ok($$("#scr-passport .routeMedal.earned").length === 1, "★ 集齐整条路线的城市章后获得路线勋章");
+  ok($("#scr-passport [data-gear='tent']").classList.contains("open"), "★ 路线勋章解锁稀有探险装备");
+  w.eval("renderHome()");
+  ok($("#buddyE").textContent.includes("🧭"), "★ 首页小獾同步穿戴探险装备");
+
   console.log("— 💎 宝库 —");
   $$(".tab").find(t => t.dataset.tab === "gems").click();
   ok($("#scr-gems").classList.contains("on"), "宝库显示");

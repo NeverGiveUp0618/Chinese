@@ -90,6 +90,7 @@ const S = () => w.eval("S");
   ok($("#scr-report").innerHTML.includes("五大题材"), "★ 有五大题材统计");
   ok($("#scr-report").innerHTML.includes("写景") && $("#scr-report").innerHTML.includes("状物") && $("#scr-report").innerHTML.includes("写人"), "四大考试题材都在");
   ok($("#scr-report").innerHTML.includes("六件法宝"), "有法宝掌握情况");
+  ok($("#scr-report").innerHTML.includes("探险成长") && $("#scr-report").innerHTML.includes("不设断签惩罚"), "★ 家长能看到累计成长，断签不清零");
   ok($("#scr-report").innerHTML.includes("最近 7 天"), "有7天趋势");
   ok($("#scr-report").innerHTML.includes("迁移练习") && $("#scr-report").innerHTML.includes("不评价改写得好不好"), "★ 报告统计迁移次数，但不评价改写好坏");
   ok($("#scr-report").innerHTML.includes("别急着补短板"), "★ 给家长的解读建议");

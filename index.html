@@ -52,8 +52,14 @@ body {
 
 /* ---- 首页 ---- */
 #buddyCard { text-align: center; position: relative; }
-#buddyE { font-size: 70px; line-height: 1.2; display: inline-block; }
+#buddyE { margin:0 auto; }
 #buddyE.bounce { animation: bounce .5s; }
+.buddyAvatar { width:104px; height:88px; position:relative; display:inline-block; vertical-align:middle; }
+.buddyBody { position:absolute; z-index:2; left:17px; top:10px; font-size:70px; line-height:1; }
+.buddyGear { position:absolute; z-index:3; line-height:1; filter:drop-shadow(0 2px 2px rgba(80,55,30,.2)); }
+.buddyGear.head { font-size:38px; left:34px; top:-4px; transform:rotate(-5deg); }
+.buddyGear.hand { font-size:30px; right:0; bottom:5px; transform:rotate(8deg); }
+.buddyGear.back { z-index:1; font-size:42px; left:0; bottom:3px; transform:rotate(-8deg); }
 @keyframes bounce { 0%,100% { transform: none; } 30% { transform: translateY(-14px) scale(1.08); } 60% { transform: translateY(0) scale(.96); } }
 #buddySay { font-size: 14px; color: #7a5a2a; background: #f7ecd5; border-radius: 14px; padding: 8px 12px; margin-top: 6px; line-height: 1.5; }
 .taskRow { display: flex; align-items: center; gap: 10px; padding: 9px 4px; border-bottom: 1px dashed #ecdcc0; }
@@ -70,6 +76,42 @@ body {
 .homeGrid .hSub { font-size: 11px; color: #b0997a; margin-top: 2px; }
 .homeGrid .transferReady { border:2px solid #d9a441; background:linear-gradient(145deg,#fffdf7,#fff3d6); }
 .homeGrid .transferReady .hName::after { content:" 可用了"; color:#6a9a4a; font-size:10px; }
+.nextPrize { display:flex; align-items:center; gap:10px; padding:12px 14px; border:2px solid #ead09a; background:linear-gradient(145deg,#fffdf7,#fff5dc); cursor:pointer; }
+.nextPrizeIcon { font-size:34px; }
+.nextPrize b { display:block; color:#7a5a2a; font-size:14px; }
+.nextPrize small { display:block; color:#9b8058; font-size:11px; line-height:1.55; }
+
+/* ---- 探险护照：所有成果只增加，不惩罚断签 ---- */
+.passportHero { display:flex; align-items:center; gap:12px; background:linear-gradient(135deg,#fff8df,#f5e2b9); }
+.passportHero b { display:block; font-size:18px; color:#7a5a2a; }
+.passportHero small { display:block; margin-top:3px; font-size:11px; line-height:1.5; color:#9b8058; }
+.passportStats { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-bottom:14px; }
+.passportStats div { background:#fffdf7; border-radius:14px; padding:10px 4px; text-align:center; box-shadow:0 2px 8px rgba(140,110,70,.12); }
+.passportStats b { display:block; font-size:20px; color:#c07a2c; }
+.passportStats small { font-size:10px; color:#a58d6b; }
+.calendar { display:grid; grid-template-columns:repeat(7,1fr); gap:5px; padding:12px; }
+.calendar span { min-height:34px; display:flex; align-items:center; justify-content:center; position:relative; border-radius:10px; font-size:12px; color:#8f7a5d; }
+.calendar .week { min-height:22px; font-weight:700; color:#b0997a; }
+.calendar .day.today { outline:2px solid #d9a441; font-weight:800; }
+.calendar .day.checked { background:#fff0bd; color:#7a5a2a; font-weight:800; }
+.calendar .day i { position:absolute; right:-1px; bottom:-4px; font-style:normal; font-size:12px; }
+.stampGrid { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-bottom:14px; }
+.stamp { min-width:0; background:rgba(255,253,247,.65); border:2px dashed #d9ccb5; border-radius:50% 50% 45% 45%; aspect-ratio:1/1.06; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; filter:grayscale(1); opacity:.55; }
+.stamp.earned { background:#fff8df; border-color:#d9a441; filter:none; opacity:1; box-shadow:0 2px 8px rgba(170,115,35,.16); }
+.stamp span { font-size:25px; }
+.stamp b { font-size:11px; color:#7a5a2a; }
+.stamp small { max-width:90%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:8px; color:#a58d6b; }
+.medalRow { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-bottom:14px; }
+.routeMedal { background:#eee8dc; border-radius:15px; padding:10px 5px; text-align:center; opacity:.58; }
+.routeMedal.earned { background:linear-gradient(145deg,#fff4c9,#f5d77e); opacity:1; box-shadow:0 3px 9px rgba(170,115,35,.2); }
+.routeMedal span,.routeMedal b,.routeMedal small { display:block; }
+.routeMedal span { font-size:27px; }.routeMedal b { font-size:10px; color:#795728; }.routeMedal small { font-size:8px; color:#9b8058; margin-top:2px; }
+.outfitPreview { display:flex; align-items:center; gap:7px; padding:10px; }
+.outfitPreview b { display:block; font-size:14px; color:#7a5a2a; }.outfitPreview small { display:block; font-size:10px; line-height:1.5; color:#9b8058; }
+.gearGrid { display:grid; grid-template-columns:repeat(2,1fr); gap:9px; }
+.gearItem { min-width:0; border:2px solid #e3d5ba; border-radius:15px; background:#fffdf7; padding:10px 6px; font-family:inherit; color:#7a5a2a; }
+.gearItem span,.gearItem b,.gearItem small { display:block; }.gearItem span { font-size:30px; }.gearItem b { font-size:12px; }.gearItem small { font-size:9px; color:#a58d6b; margin-top:2px; }
+.gearItem.locked { filter:grayscale(1); opacity:.55; }.gearItem.on { border-color:#6a9a4a; background:#edf8e7; box-shadow:0 0 0 2px rgba(106,154,74,.12); }
 
 /* ---- 卡通探险路线图（不是地理比例地图，不绘制国界） ---- */
 .adventureMap { position: relative; padding: 24px 0 12px; overflow: hidden; }
@@ -181,6 +223,7 @@ body {
 #doneTitle { font-size: 22px; font-weight: 800; color: #8a5a2a; margin: 8px 0 4px; }
 #doneMsg { font-size: 14px; color: #8a7a5a; margin-bottom: 6px; line-height: 1.7; }
 #doneCoins { font-size: 20px; font-weight: 800; color: #c08a2a; margin-bottom: 18px; }
+.newAward { margin-top:9px; padding:9px; border-radius:12px; background:#fff1bd; color:#9a651e; font-size:14px; font-weight:800; }
 
 /* ---- 反馈 ---- */
 #toast { position: fixed; left: 50%; top: 16%; transform: translateX(-50%); background: rgba(90,70,40,.92); color: #fff; border-radius: 16px; padding: 10px 18px; font-size: 14px; font-weight: 700; z-index: 99; opacity: 0; pointer-events: none; transition: opacity .25s; max-width: 84%; text-align: center; line-height: 1.5; }
@@ -201,6 +244,7 @@ body {
 
   <main id="screens">
     <section id="scr-home" class="screen"></section>
+    <section id="scr-passport" class="screen"></section>
     <section id="scr-map" class="screen"></section>
     <section id="scr-stop" class="screen"></section>
     <section id="scr-cards" class="screen"></section>
