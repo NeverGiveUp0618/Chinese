@@ -1108,14 +1108,22 @@ function normalizeAiReview(raw) {
   x = x || {};
   const rwRaw = x.rewrite || x.exampleRewrite || x.example || x["示范修改"] || {};
   const rw = typeof rwRaw === "string" ? { suggested: rwRaw } : rwRaw;
+  const highlight = x.highlight && typeof x.highlight === "object" ? x.highlight : null;
+  const highlights = highlight
+    ? [`${highlight.quote ? `“${highlight.quote}”` : "原文亮点"}${highlight.reason ? `——${highlight.reason}` : ""}`]
+    : aiList(x.highlights || x.strengths || x.goodPoints || x["亮点"] || x["写得好的地方"]);
+  const rawChecks = x.checks || x.issues || x.possibleIssues || x["疑似需检查"] || x["需要检查"];
+  const checks = Array.isArray(rawChecks)
+    ? rawChecks.map(item => typeof item === "string" ? item : `${item.quote ? `“${item.quote}”` : "疑似问题"}${item.issue ? `——${item.issue}` : item.text || item.content || ""}`).filter(Boolean)
+    : aiList(rawChecks);
   const out = {
-    highlights: aiList(x.highlights || x.strengths || x.goodPoints || x["亮点"] || x["写得好的地方"]),
-    checks: aiList(x.checks || x.issues || x.possibleIssues || x["疑似需检查"] || x["需要检查"]),
-    suggestion: String(x.suggestion || x.prioritySuggestion || x.improvement || x["优先建议"] || x["修改建议"] || ""),
+    highlights,
+    checks,
+    suggestion: String(x.priorityTip || x.suggestion || x.prioritySuggestion || x.improvement || x["优先建议"] || x["修改建议"] || ""),
     original: String(rw.original || rw.before || x.original || x["原句"] || ""),
-    rewrite: String(rw.suggested || rw.after || rw.rewrite || x.rewritten || x["建议句"] || ""),
+    rewrite: String(rw.suggestion || rw.suggested || rw.after || rw.rewrite || x.rewritten || x["建议句"] || ""),
     summary: String(x.summary || x.content || x.message || x["总体参考"] || ""),
-    commentDraft: String(x.commentDraft || x.parentComment || x["家长评语草稿"] || "")
+    commentDraft: String(x.parentCommentDraft || x.commentDraft || x.parentComment || x["家长评语草稿"] || "")
   };
   return out;
 }
@@ -1162,8 +1170,10 @@ async function requestAiReview(key, button, refresh) {
   try {
     const response = await fetch(AI_REVIEW_URL, {
       method: "POST", signal: controller.signal,
-      headers: { "Content-Type": "application/json", "X-Review-Token": token },
+      // text/plain 属于 CORS 简单请求，可绕开部分大陆网络对 OPTIONS 预检的不稳定拦截。
+      headers: { "Content-Type": "text/plain;charset=UTF-8" },
       body: JSON.stringify({
+        reviewToken: token,
         type: ctx.kind, grade: "小学四年级", title: ctx.title || "日常练笔",
         prompt: ctx.prompt || "", text: ctx.text, content: ctx.text, essay: ctx.text,
         targetTechnique: ctx.target || "", sourceText: ctx.sourceText || "",
@@ -1180,7 +1190,8 @@ async function requestAiReview(key, button, refresh) {
     S.aiReviews[key] = { at: todayStr(), data }; save();
     refreshView();
   } catch (e) {
-    const msg = e.name === "AbortError" ? "请求超时，请稍后再试" : e.message;
+    const rawMsg = String(e.message || "");
+    const msg = e.name === "AbortError" ? "请求超时，请稍后再试" : /failed to fetch|networkerror|load failed/i.test(rawMsg) ? "无法连接 AI 服务，请换一个网络后重试" : rawMsg;
     toast("AI 批阅失败：" + msg, 3200);
     if (responseIsAuthError(msg)) refreshView();
     else { button.disabled = false; button.textContent = "重新尝试"; if (status) status.textContent = msg; }

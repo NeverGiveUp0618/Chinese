@@ -73,22 +73,24 @@ const S = () => w.eval("S");
   w.fetch = async (url, options) => {
     aiRequest = { url, options };
     return { ok:true, status:200, json:async () => ({ ok:true, review:{
-      highlights:["“绿色的大馒头”让山的样子很具体。"],
-      checks:["可以请孩子自己检查‘一个个’是否需要保留。"],
-      suggestion:"下一次只补一句米粉的颜色。",
-      rewrite:{ original:"米粉滑溜溜的。", suggested:"雪白的米粉滑溜溜地钻进筷子间。" }
+      highlight:{quote:"绿色的大馒头",reason:"让山的样子很具体。"},
+      checks:[{quote:"一个个",issue:"可以请孩子自己检查是否需要保留。"}],
+      priorityTip:"下一次只补一句米粉的颜色。",
+      rewrite:{ original:"米粉滑溜溜的。", suggestion:"雪白的米粉滑溜溜地钻进筷子间。" },
+      parentCommentDraft:"我喜欢绿色的大馒头这个比喻。下次可以补一句米粉的颜色。"
     } }) };
   };
   $("#scr-reviewOne .aiGenerate").click();
   await sleep(30);
   const aiBody = JSON.parse(aiRequest.options.body);
-  ok(aiRequest.url.includes("chinese-writing-ai") && aiRequest.options.headers["X-Review-Token"] === "review-secret", "★ AI 请求只通过配置好的安全 Worker");
+  ok(aiRequest.url.includes("chinese-writing-ai") && aiRequest.options.headers["Content-Type"].startsWith("text/plain") && !aiRequest.options.headers["X-Review-Token"], "★ AI 使用无需 OPTIONS 预检的简单请求访问安全 Worker");
+  ok(aiBody.reviewToken === "review-secret", "★ 访问口令经 HTTPS 请求正文发送，不再放在自定义请求头");
   ok(aiBody.text.includes("绿色的大馒头") && aiBody.grade === "小学四年级", "★ Worker 收到当前题目和原文及四年级信息");
   ok(aiBody.requirements.includes("不打总分") && !aiBody.name && !aiBody.wallet, "★ 请求明确不打总分，且不发送姓名或钱包数据");
-  ok($("#scr-reviewOne").textContent.includes("一个优先建议") && $("#scr-reviewOne").textContent.includes("雪白的米粉"), "★ AI 参考按亮点、检查、一个建议和示范修改展示");
+  ok($("#scr-reviewOne").textContent.includes("让山的样子很具体") && $("#scr-reviewOne").textContent.includes("一个优先建议") && $("#scr-reviewOne").textContent.includes("雪白的米粉"), "★ 完整兼容 Worker 的亮点、检查、一个建议和示范修改结构");
   ok($("#cmtArea").value.includes("还没提交"), "★ AI 返回后仍保留家长未提交的评语");
   $("#scr-reviewOne .aiUseComment").click();
-  ok($("#cmtArea").value.includes("我很喜欢") && w.document.activeElement !== $("#cmtArea"), "★ 放入 AI 评语只填内容，不自动弹出键盘");
+  ok($("#cmtArea").value.includes("我喜欢绿色的大馒头") && w.document.activeElement !== $("#cmtArea"), "★ Worker 的家长评语草稿可放入输入框，但不自动弹出键盘");
   ok(!w.localStorage.getItem("treasureWriting_v1").includes("review-secret"), "★ 访问口令不写入长期存储或备份状态");
   $("#cmtArea").value = "";
 
