@@ -74,6 +74,7 @@ const ok = (c, m) => { c ? pass++ : fail++; console.log(`  ${c ? "✓" : "✗ FA
   ok($("#scr-write").classList.contains("on"), "进入写作页");
   ok($("#scr-write").innerHTML.includes("比喻杖"), "任务用的是比喻杖");
   ok(!!$("#writeArea"), "有输入框");
+  ok(w.document.activeElement !== $("#writeArea"), "★ 进入寻宝写作页不自动聚焦，不主动弹出键盘");
   ok($("#micTip").textContent.includes("麦克风"), "★ 提示可以用语音口述（降低门槛）");
   ok($("#scr-write").innerHTML.includes("比喻 ＝"), "首次使用会先教这件法宝");
 
@@ -87,6 +88,8 @@ const ok = (c, m) => { c ? pass++ : fail++; console.log(`  ${c ? "✓" : "✗ FA
   ok(jb.includes("很美"), "指出空洞词");
   ok(jb.includes("看看别人怎么写"), "★ 给范例对照（不是骂她）");
   ok(!!$("#jSkip"), "★ 就算没用上技巧，也能收进宝库（绝不强迫）");
+  $("#jAgain").click();
+  ok(w.document.activeElement !== $("#writeArea"), "★ 点「再加一句」也不抢光标，等孩子自己点输入位置");
 
   // ② 改成用了比喻的
   $("#writeArea").value = "桂林的山像一个个绿色的大馒头，一个挨着一个排到天边。";
@@ -114,7 +117,7 @@ const ok = (c, m) => { c ? pass++ : fail++; console.log(`  ${c ? "✓" : "✗ FA
   ok(!$("#scr-idea #writeArea") && !!$("#iStart"), "★ 先完整看脑洞题目，不立刻显示输入框和键盘");
   ok(!!$("#iSwap"), "可以换题目");
   $("#iStart").click();
-  ok(!!$("#scr-idea #writeArea") && w.document.activeElement === $("#scr-idea #writeArea"), "★ 点「想到什么就写什么」后才出现输入框并聚焦");
+  ok(!!$("#scr-idea #writeArea") && w.document.activeElement !== $("#scr-idea #writeArea"), "★ 点「想到什么就写什么」后出现输入框，但不自动聚焦或弹键盘");
   $("#scr-idea #writeArea").value = "李白秒回我：这月亮拍得不错，但没我床前那个亮。然后他连发九张月亮照片。";
   $("#iGo").click();
   await sleep(50);

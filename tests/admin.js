@@ -36,6 +36,7 @@ const S = () => w.eval("S");
   console.log("\n② 家长后台入口");
   w.eval("navStack=[renderParent];renderParent();");
   ok(!!$("#pGate"), "密码门");
+  ok(w.document.activeElement !== $("#pGate"), "★ 家长密码框不自动聚焦或弹出键盘");
   $("#pGate").value = "223826"; $("#pGo").click();
   ok(!!$("#pReview"), "★ 有「作文批阅台」");
   ok($("#pReview").textContent.includes("孩子作品与批阅"), "★ 家长后台升级为统一作品工作台");
@@ -58,6 +59,7 @@ const S = () => w.eval("S");
   ok($("#scr-reviewOne").innerHTML.includes("比喻") || $("#scr-reviewOne").innerHTML.includes("五感"), "★ 系统列出检测到的技巧（供参考）");
   ok($("#scr-reviewOne").innerHTML.includes("好不好，只有你能判"), "★ 明确：系统只判用没用，好坏由家长判");
   ok($("#scr-reviewOne").innerHTML.includes("AI 批阅参考") && !!$("#scr-reviewOne .aiTokenInput"), "★ 原文下方有 AI 参考区，首次使用需输入 Worker 家长口令");
+  ok(w.document.activeElement !== $("#scr-reviewOne .aiTokenInput") && w.document.activeElement !== $("#cmtArea"), "★ 进入批阅页不自动聚焦任何输入框");
   ok($$("#scoreRow [data-score]").length === 5, "5 星打分");
   ok(!!$("#cmtArea"), "有评语输入框");
 
@@ -85,6 +87,8 @@ const S = () => w.eval("S");
   ok(aiBody.requirements.includes("不打总分") && !aiBody.name && !aiBody.wallet, "★ 请求明确不打总分，且不发送姓名或钱包数据");
   ok($("#scr-reviewOne").textContent.includes("一个优先建议") && $("#scr-reviewOne").textContent.includes("雪白的米粉"), "★ AI 参考按亮点、检查、一个建议和示范修改展示");
   ok($("#cmtArea").value.includes("还没提交"), "★ AI 返回后仍保留家长未提交的评语");
+  $("#scr-reviewOne .aiUseComment").click();
+  ok($("#cmtArea").value.includes("我很喜欢") && w.document.activeElement !== $("#cmtArea"), "★ 放入 AI 评语只填内容，不自动弹出键盘");
   ok(!w.localStorage.getItem("treasureWriting_v1").includes("review-secret"), "★ 访问口令不写入长期存储或备份状态");
   $("#cmtArea").value = "";
 

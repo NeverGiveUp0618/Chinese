@@ -506,7 +506,6 @@ function renderWrite(stop, qi) {
     renderJudge(r, text, tool, q, stop, qi);
   };
   show("write", tool.name);
-  setTimeout(() => ta.focus(), 200);
 }
 
 /* 小獾的即时回应——这个项目的灵魂 */
@@ -567,9 +566,9 @@ function renderJudge(r, text, tool, q, stop, qi) {
   };
   if (r.hit) {
     $("#jSave").onclick = finish;
-    $("#jAgain").onclick = () => { $("#judgeBox").innerHTML = ""; $("#writeArea").focus(); };
+    $("#jAgain").onclick = () => { $("#judgeBox").innerHTML = ""; };
   } else {
-    $("#jAgain").onclick = () => { $("#judgeBox").innerHTML = ""; $("#writeArea").focus(); };
+    $("#jAgain").onclick = () => { $("#judgeBox").innerHTML = ""; };
     $("#jSkip").onclick = finish;   // 绝不强迫：写了就能存，就能拿分
   }
 }
@@ -648,7 +647,6 @@ function renderIdea() {
         renderIdea();
       };
     };
-    ta.focus(); // 只在孩子主动点“开始写”后弹出手机键盘
   };
   show("idea", "💡 脑洞任务");
 }
@@ -1210,7 +1208,7 @@ function bindAiPanels(refresh) {
     if (!saved || !area) return;
     const draft = aiCommentDraft(saved);
     area.value = area.value.trim() ? area.value.trim() + "\n" + draft : draft;
-    area.focus(); toast("已放入评语框，请读一遍再提交", 2200);
+    toast("已放入评语框，请读一遍再提交", 2200);
   });
 }
 function renderReview(filter = "all") {
