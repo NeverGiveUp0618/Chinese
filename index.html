@@ -51,6 +51,7 @@ body {
 .btn.small { width: auto; display: inline-block; padding: 10px 18px; font-size: 15px; }
 .btn:disabled { opacity: .45; }
 .sectionTitle { font-size: 15px; font-weight: 800; color: #8a6a2a; margin: 6px 2px 8px; }
+.actRow { display:flex; align-items:center; gap:12px; }
 
 /* ---- 首页 ---- */
 #buddyCard { text-align: center; position: relative; }
@@ -245,6 +246,32 @@ body {
 .cmtCard { background:#fff8e8; border:1.5px solid #f0d9a8; border-radius:14px; padding:12px; margin-bottom:12px; }
 .cmtCard .ct { font-size:13px; font-weight:800; color:#c07a2c; margin-bottom:4px; }
 .cmtCard .cb { font-size:14px; line-height:1.8; color:#5a4a34; white-space:pre-wrap; }
+
+/* ---- 家长作品工作台 ---- */
+.workTabs { display:flex; gap:7px; overflow-x:auto; padding:2px 1px 10px; scrollbar-width:none; }
+.workTabs::-webkit-scrollbar { display:none; }
+.workTab { flex:0 0 auto; border:1.5px solid #e5d2ae; border-radius:18px; background:#fffdf7; color:#8a6a3a; padding:7px 11px; font:inherit; font-size:12px; font-weight:700; }
+.workTab.on { border-color:#c9892d; background:#fff0c9; color:#925a16; }
+.workItem { cursor:pointer; border:1.5px solid transparent; }
+.workItem:active { transform:scale(.985); }
+.workTop { display:flex; align-items:center; gap:9px; margin-bottom:7px; }
+.workType { border-radius:10px; padding:3px 8px; font-size:10px; font-weight:800; white-space:nowrap; }
+.workType.essay { background:#fff0d9; color:#a85d1f; }
+.workType.quest { background:#e9f4e6; color:#4f7f43; }
+.workType.idea { background:#f1eafb; color:#77529a; }
+.workType.remix { background:#e8f2fa; color:#497595; }
+.workDate { margin-left:auto; color:#b0997a; font-size:10px; }
+.workPrompt { color:#8a765a; font-size:11px; line-height:1.55; margin-bottom:5px; }
+.workText { color:#4a3c28; font-size:14px; line-height:1.75; white-space:pre-wrap; }
+.workMeta { color:#a58d6b; font-size:10px; margin-top:7px; }
+.aiRef { border:1.5px dashed #bda8cf; background:linear-gradient(145deg,#fbf8ff,#f3edf8); }
+.aiRef .aiTitle { color:#75578f; font-size:14px; font-weight:800; }
+.aiRef .aiStatus { margin-top:6px; color:#766b80; font-size:12px; line-height:1.75; }
+.aiRef .aiSafe { margin-top:8px; padding:7px 9px; border-radius:9px; background:#fff; color:#9a87a7; font-size:10px; line-height:1.55; }
+.parentStats { display:grid; grid-template-columns:repeat(3,1fr); gap:7px; text-align:center; }
+.parentStats div { min-width:0; padding:4px 2px; }
+.parentStats b { display:block; color:#b87324; font-size:20px; }
+.parentStats small { color:#a58d6b; font-size:10px; }
 
 /* ---- 宝库 ---- */
 .gem { background: #fffdf7; border-radius: 14px; padding: 11px 13px; margin-bottom: 10px; box-shadow: 0 2px 8px rgba(140,110,70,.12); }

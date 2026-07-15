@@ -38,6 +38,7 @@ const S = () => w.eval("S");
   ok(!!$("#pGate"), "密码门");
   $("#pGate").value = "223826"; $("#pGo").click();
   ok(!!$("#pReview"), "★ 有「作文批阅台」");
+  ok($("#pReview").textContent.includes("孩子作品与批阅"), "★ 家长后台升级为统一作品工作台");
   ok(!!$("#pReport") && !!$("#pGems") && !!$("#pReward") && !!$("#pBackup"), "报告/宝库/奖励/备份 都在");
   ok($("#scr-parent").innerHTML.includes("只有人能给") || $("#scr-parent").innerHTML.includes("最后一环"), "★ 说清后台的核心价值");
 
@@ -50,11 +51,13 @@ const S = () => w.eval("S");
   ok($("#scr-review").classList.contains("on"), "进入批阅台");
   ok($("#scr-review").innerHTML.includes("等你批阅"), "列表显示待批阅");
   ok($("#scr-review").innerHTML.includes("只提一个"), "★ 教家长怎么批：先夸一句，只提一个改进点");
+  ok($$("#scr-review .workTab").length === 6, "★ 作文、寻宝练笔、脑洞和宝物变身可分类查看");
   $$("#scr-review .actRow")[0].click();
   ok($("#scr-reviewOne").classList.contains("on"), "进入单篇批阅");
   ok($("#scr-reviewOne").innerHTML.includes("绿色的大馒头"), "★ 能读到孩子写的全文");
   ok($("#scr-reviewOne").innerHTML.includes("比喻") || $("#scr-reviewOne").innerHTML.includes("五感"), "★ 系统列出检测到的技巧（供参考）");
   ok($("#scr-reviewOne").innerHTML.includes("好不好，只有你能判"), "★ 明确：系统只判用没用，好坏由家长判");
+  ok($("#scr-reviewOne").innerHTML.includes("AI 批阅参考") && $("#scr-reviewOne").innerHTML.includes("尚未安全接入"), "★ 原文下方预留 AI 批阅区，但暂不上传内容");
   ok($$("#scoreRow [data-score]").length === 5, "5 星打分");
   ok(!!$("#cmtArea"), "有评语输入框");
 
@@ -99,6 +102,19 @@ const S = () => w.eval("S");
   w.eval(`S.gems=[{txt:"桂林的山像绿色的大馒头",tool:"simile",from:"桂林",d:todayStr(),stars:3}];save();navStack=[renderGemsAdmin];renderGemsAdmin();`);
   ok($("#scr-gemsAdmin").innerHTML.includes("全是她自己写的"), "★ 强调这是她的成长档案");
   ok(!!$("#gExport"), "★ 可以一键导出全部句子");
+
+  console.log("\n⑥-2 统一作品工作台：日常训练也能在后台查看");
+  w.eval(`S.gems=[
+    {txt:"桂林的山像绿色的大馒头",tool:"simile",from:"桂林",d:todayStr(),stars:3,kind:"quest",prompt:"用比喻写桂林的山"},
+    {txt:"如果李白有手机，他会先拍月亮。",tool:"idea",from:"脑洞",d:todayStr(),stars:2,kind:"idea",prompt:"给李白一部手机会怎样？"},
+    {txt:"风像一个调皮的孩子推着我跑。",tool:"simile",from:"宝物变身·桂林",d:todayStr(),stars:3,kind:"remix",prompt:"换成比喻写法",sourceTxt:"风很大。"}
+  ];save();navStack=[renderReview];renderReview();`);
+  ok($$("#scr-review .workItem").length === 3, "★ 后台集中显示全部日常训练原文");
+  ok($("#scr-review").textContent.includes("用比喻写桂林的山") && $("#scr-review").textContent.includes("给李白一部手机"), "★ 同页显示训练题目和孩子原文");
+  $$("#scr-review .workItem")[0].click();
+  ok($("#scr-reviewOne").textContent.includes("孩子的原文") && $("#scr-reviewOne").textContent.includes("绿色的大馒头"), "★ 不退出后台即可查看单条完整训练结果");
+  ok($("#scr-reviewOne").textContent.includes("AI 批阅参考") && $("#scr-reviewOne button").disabled, "★ 日常训练也有未接入的 AI 参考位");
+  w.eval(`S.gems=[{txt:"桂林的山像绿色的大馒头",tool:"simile",from:"桂林",d:todayStr(),stars:3}];save();`);
 
   console.log("\n⑦ 奖励与共享钱包");
   w.eval("navStack=[renderReward];renderReward();");

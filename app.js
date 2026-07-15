@@ -549,7 +549,11 @@ function renderJudge(r, text, tool, q, stop, qi) {
     st.stars[qi] = Math.max(st.stars[qi] || 0, r.stars);
     const ts = toolS(tool.id);
     ts.learned = true; ts.used++; ts.best = Math.max(ts.best, r.stars);
-    S.gems.unshift({ txt: text, tool: tool.id, from: stop.name, d: todayStr(), stars: r.stars });
+    S.gems.unshift({
+      txt: text, tool: tool.id, from: stop.name, d: todayStr(), stars: r.stars,
+      kind: "quest", stopId: stop.id, questIndex: qi, genre: q.genre,
+      prompt: String(q.ask || "").replace(/<[^>]+>/g, "")
+    });
     save();
     if (first) bump("quests");
     bump("gems");
@@ -629,7 +633,10 @@ function renderIdea() {
         </div>`;
       sndGood(); if (r.stars === 3) confetti(12);
       $("#scr-idea #iSave").onclick = () => {
-        S.gems.unshift({ txt: text, tool: "idea", from: "脑洞", d: todayStr(), stars: r.stars });
+        S.gems.unshift({
+          txt: text, tool: "idea", from: "脑洞", d: todayStr(), stars: r.stars,
+          kind: "idea", prompt: idea.q
+        });
         save(); bump("ideas"); bump("gems");
         addCoins(r.stars * 5 + 5);
         toast("💎 收进宝库啦！", 1600);
@@ -742,7 +749,10 @@ function renderRemix() {
     r.hit ? sndGood() : sndSoft();
     $("#remixSave").onclick = () => {
       if (saved) return; saved = true;
-      S.gems.unshift({ txt: text, tool: target, from: "宝物变身·" + source.from, d: todayStr(), stars: r.hit ? 3 : 1 });
+      S.gems.unshift({
+        txt: text, tool: target, from: "宝物变身·" + source.from, d: todayStr(), stars: r.hit ? 3 : 1,
+        kind: "remix", prompt: `把原句换成「${tool.short}」写法`, sourceTxt: source.txt
+      });
       S.remixes.unshift({ from: source.from, tool: target, d: todayStr(), hit: r.hit });
       save(); bump("gems"); addCoins(r.hit ? 15 : 8);
       if (r.hit) confetti(12);
@@ -903,18 +913,19 @@ function renderParent() {
     </div>` : ""}
 
     <div class="card">
-      <div class="sectionTitle" style="margin:0 0 8px">📊 总览</div>
-      <div style="display:flex;text-align:center">
-        <div style="flex:1"><div style="font-size:22px;font-weight:800;color:#c08a2a">${tot}</div><div style="font-size:11px;color:#b0997a">写过的句子</div></div>
-        <div style="flex:1"><div style="font-size:22px;font-weight:800;color:#6a9a4a">${doneQuests()}/${totalQuests()}</div><div style="font-size:11px;color:#b0997a">寻宝任务</div></div>
-        <div style="flex:1"><div style="font-size:22px;font-weight:800;color:#a06a2a">${days}</div><div style="font-size:11px;color:#b0997a">打卡天数</div></div>
+      <div class="sectionTitle" style="margin:0 0 8px">📊 训练总览</div>
+      <div class="parentStats">
+        <div><b>${tot}</b><small>原创句子</small></div>
+        <div><b>${Object.keys(S.essays).filter(id => (S.essays[id].paras || []).some(p => p && p.trim())).length}</b><small>作文</small></div>
+        <div><b>${pending}</b><small>待批阅</small></div>
       </div>
+      <div style="font-size:10px;color:#b0997a;text-align:center;margin-top:7px">寻宝 ${doneQuests()}/${totalQuests()} · 累计探险 ${days} 天</div>
     </div>
 
     <div class="card actRow" id="pReview">
-      <span style="font-size:26px">✍️</span>
-      <span style="flex:1;font-size:15px;font-weight:800;color:#7a5a2a">作文批阅台
-        <span style="display:block;font-size:12px;color:#b0997a;font-weight:400">读她的作文 · 打分 · 写评语（评语会显示给她看）</span>
+      <span style="font-size:26px">🗂️</span>
+      <span style="flex:1;font-size:15px;font-weight:800;color:#7a5a2a">孩子作品与批阅
+        <span style="display:block;font-size:12px;color:#b0997a;font-weight:400">作文、寻宝练笔、脑洞和宝物变身集中查看</span>
       </span>
       ${pending ? `<span style="background:#e8842d;color:#fff;border-radius:10px;padding:2px 8px;font-size:12px;font-weight:700">${pending}</span>` : `<span style="font-size:20px;color:#d9a441">▶</span>`}
     </div>
@@ -957,7 +968,7 @@ function renderParent() {
     <div class="card" style="font-size:12.5px;color:#6a5a42;line-height:1.9">
       <b style="color:#8a6a2a">这个后台最重要的一件事：</b><br>
       系统只能判断她<b>用没用某个技巧</b>（比喻、五感、动作分解……），<b>但「写得好不好」判不了，也不该判</b>。<br>
-      所以<b>作文批阅台不是可选功能，是这个产品闭环的最后一环</b>。她写完一篇，你读一遍、打个分、写两句话——这两句话比系统给的一百颗星都重。
+      但作文<b>写得好不好，只有人能给判断</b>。所以家长批阅仍是完整作文的<b>最后一环</b>：由你读、你打分、你写评语。AI 批阅区目前只做好界面，尚未安全接入，也不会把孩子的文字发送到任何外部服务。
     </div>`;
 
   if (pending) $("#pendBanner").onclick = () => go(renderReview);
@@ -1056,14 +1067,46 @@ function renderTestMode() {
   show("test", "🧪 测试模式");
 }
 
-/* ---------------- ✍️ 作文批阅台（语文后台的灵魂） ---------------- */
-function renderReview() {
+/* ---------------- 🗂️ 孩子作品与批阅（家长统一工作台） ---------------- */
+function gemKind(g) {
+  if (g.kind) return g.kind;
+  if (g.tool === "idea" || g.from === "脑洞") return "idea";
+  if (String(g.from || "").startsWith("宝物变身")) return "remix";
+  return "quest";
+}
+function gemKindName(k) { return ({ quest: "寻宝练笔", idea: "脑洞", remix: "宝物变身" })[k] || "日常练笔"; }
+function oldGemPrompt(g, k) {
+  if (g.prompt) return g.prompt;
+  if (k === "idea") return "脑洞题（早期记录未保存原题）";
+  if (k === "remix") return "把旧句换一种写法（早期记录未保存原句）";
+  const t = TOOLS.find(x => x.id === g.tool);
+  return `${g.from || "城市"}练笔 · ${t ? "练习「" + t.short + "」" : "原题未保存"}`;
+}
+function renderAiPlaceholder() {
+  return `<div class="card aiRef">
+    <div class="aiTitle">✨ AI 批阅参考</div>
+    <div class="aiStatus"><b>尚未安全接入。</b>目前不会上传孩子的文字，也不会生成虚假的 AI 评价。后续接入后，这里会显示：原句亮点、疑似需检查处、一个优先建议和一处示范修改。</div>
+    <div class="aiSafe">🔒 DeepSeek 密钥不会放进网页代码；完成安全中转服务后才会启用。</div>
+    <button class="btn small ghost" disabled style="margin-top:9px">等待安全接入</button>
+  </div>`;
+}
+function renderReview(filter = "all") {
   const written = ESSAYS.filter(e => { const es = S.essays[e.id]; return es && (es.paras || []).some(p => p && p.trim()); });
+  const pending = written.filter(e => S.essays[e.id].done && !S.essays[e.id].reviewed);
+  const gems = S.gems.map((g, i) => ({ g, i, k: gemKind(g) }));
+  const filteredEssays = filter === "pending" ? pending : (filter === "all" || filter === "essay" ? written : []);
+  const filteredGems = filter === "all" ? gems : gems.filter(x => x.k === filter);
+  const tabs = [
+    ["all", "全部", written.length + gems.length], ["pending", "待批作文", pending.length],
+    ["essay", "作文", written.length], ["quest", "寻宝练笔", gems.filter(x => x.k === "quest").length],
+    ["idea", "脑洞", gems.filter(x => x.k === "idea").length], ["remix", "宝物变身", gems.filter(x => x.k === "remix").length]
+  ];
   $("#scr-review").innerHTML = `
     <div class="card" style="padding:12px;font-size:12.5px;color:#6a5a42;line-height:1.8">
-      <b style="color:#8a6a2a">怎么批：</b>先<b>找一句你真心喜欢的</b>说出来（这比指出十个毛病有用），再提<b>一个</b>可以改进的地方。<b>只提一个。</b>
+      <b style="color:#8a6a2a">所有训练结果都在这里。</b>点开可看当时的题目、孩子原文、技巧检测和批阅区域。批作文时仍然是：先说一句真心喜欢的，再提一个可以改进的地方，<b>只提一个。</b>
     </div>
-    ${written.length ? written.map((e, i) => {
+    <div class="workTabs">${tabs.map(t => `<button class="workTab ${filter === t[0] ? "on" : ""}" data-filter="${t[0]}">${t[1]} ${t[2]}</button>`).join("")}</div>
+    ${filteredEssays.map(e => {
       const es = S.essays[e.id];
       const len = [...(es.paras || []).join("")].length;
       const st = es.reviewed ? "已批阅" : es.done ? "⏳ 等你批阅" : "草稿中";
@@ -1074,9 +1117,47 @@ function renderReview() {
         </span>
         <span style="font-size:20px;color:${es.done && !es.reviewed ? "#e8842d" : "#d9a441"}">▶</span>
       </div>`;
-    }).join("") : `<div class="card" style="text-align:center;color:#b0997a;font-size:14px;padding:26px">她还没写过作文<br>写完后会出现在这里等你批阅 ✍️</div>`}`;
+    }).join("")}
+    ${filteredGems.map(({ g, i, k }) => {
+      const t = TOOLS.find(x => x.id === g.tool);
+      return `<div class="card workItem" data-g="${i}">
+        <div class="workTop"><span class="workType ${k}">${gemKindName(k)}</span><b style="font-size:13px;color:#7a5a2a">${esc(g.from || "练笔")}</b><span class="workDate">${esc(g.d || "")}</span></div>
+        <div class="workPrompt">题目：${esc(oldGemPrompt(g, k))}</div>
+        <div class="workText">${esc(g.txt)}</div>
+        <div class="workMeta">${t ? t.icon + " 目标法宝：" + t.short : "自由表达"}　·　点开查看完整记录和批阅区</div>
+      </div>`;
+    }).join("")}
+    ${!filteredEssays.length && !filteredGems.length ? `<div class="card" style="text-align:center;color:#b0997a;font-size:14px;padding:26px">这个分类还没有作品</div>` : ""}`;
+  $$("#scr-review .workTab").forEach(b => b.onclick = () => renderReview(b.dataset.filter));
   $$("#scr-review .actRow").forEach(c => c.onclick = () => go(() => renderReviewOne(c.dataset.e)));
-  show("review", "✍️ 作文批阅台");
+  $$("#scr-review .workItem").forEach(c => c.onclick = () => go(() => renderTrainingOne(+c.dataset.g)));
+  show("review", "🗂️ 孩子作品与批阅");
+}
+
+function renderTrainingOne(index) {
+  const g = S.gems[index];
+  if (!g) { toast("这条记录找不到了"); goBack(); return; }
+  const k = gemKind(g), t = TOOLS.find(x => x.id === g.tool);
+  const result = t ? judge(g.txt, t.id) : null;
+  $("#scr-reviewOne").innerHTML = `
+    <div class="card" style="padding:14px">
+      <div class="workTop"><span class="workType ${k}">${gemKindName(k)}</span><b style="font-size:15px;color:#7a5a2a">${esc(g.from || "练笔")}</b><span class="workDate">${esc(g.d || "")}</span></div>
+      <div class="sectionTitle" style="margin:8px 0 5px">🎯 当时的题目</div>
+      <div style="font-size:13px;line-height:1.75;color:#6a5a42;background:#f7ecd5;border-radius:11px;padding:10px">${esc(oldGemPrompt(g, k))}</div>
+      ${g.sourceTxt ? `<div class="sectionTitle" style="margin:12px 0 5px">原来的句子</div><div style="font-size:13px;line-height:1.75;color:#8a765a">${esc(g.sourceTxt)}</div>` : ""}
+    </div>
+    <div class="card" style="padding:14px">
+      <div class="sectionTitle" style="margin:0 0 6px">📄 孩子的原文</div>
+      <div style="font-size:16px;line-height:1.95;color:#4a3c28;white-space:pre-wrap">${esc(g.txt)}</div>
+      <div style="font-size:11px;color:#b0997a;margin-top:8px">${[...g.txt].length} 字 · ${t ? t.icon + " " + t.short : "自由表达"}</div>
+    </div>
+    <div class="card" style="padding:12px">
+      <div class="sectionTitle" style="margin:0 0 6px">🔍 训练结果</div>
+      ${k === "idea" ? `<div style="font-size:13px;color:#6a5a42;line-height:1.8">脑洞只记录“愿意写出来”，不检查技巧，也不挑毛病。</div>` : `<div style="font-size:13px;color:#6a5a42;line-height:1.8">目标：${t ? t.name : "自由表达"}<br>${result && result.hit ? "✅ 检测到目标技巧" : "○ 当时未检测到目标技巧，但原文仍被完整保留"}</div>`}
+      <div style="font-size:10px;color:#b0997a;margin-top:6px">这里只记录训练事实，不代表写得好不好。</div>
+    </div>
+    ${renderAiPlaceholder()}`;
+  show("reviewOne", "🗂️ 训练详情");
 }
 
 function renderReviewOne(eid) {
@@ -1110,6 +1191,8 @@ function renderReviewOne(eid) {
         <div style="font-size:11px;color:#b0997a;margin-top:6px">⚠️ 这只是「用没用」，不代表「写得好不好」。<b>好不好，只有你能判。</b></div>
       </div>
     </div>
+
+    ${renderAiPlaceholder()}
 
     <div class="card" style="padding:14px">
       <div class="sectionTitle" style="margin:0 0 8px">✍️ 你的批阅</div>
