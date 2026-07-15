@@ -18,8 +18,8 @@ function dateAdd(n) { const d = new Date(Date.now() + n * 864e5); return d.getFu
 const LS_KEY = "treasureWriting_v1";
 /* 和英语App共享的钱包：同一个域，localStorage 互通 —— 两个学科，一只宠物 */
 const WALLET_KEY = "sharedWallet_v1";
-/* DeepSeek 只通过 Cloudflare Worker 调用；家长访问口令仅存 sessionStorage，绝不进仓库或备份 */
-const AI_REVIEW_URL = "https://chinese-writing-ai.1195689456houjunchen.workers.dev/";
+/* DeepSeek 只通过腾讯云函数安全中转；家长访问口令仅存 sessionStorage，绝不进仓库或备份 */
+const AI_REVIEW_URL = "https://1454399073-kdjvn8zqkf.ap-guangzhou.tencentscf.com/";
 const AI_TOKEN_KEY = "twAiReviewToken_v1";
 
 function defState() {
@@ -1151,8 +1151,8 @@ function renderAiPanel(ctx) {
   const tokenReady = !!aiToken();
   return `<div class="card aiRef" data-ai-card="${key}">
     <div class="aiTitle">✨ AI 批阅参考 <span>仅家长可见</span></div>
-    ${saved ? `${aiResultHtml(saved)}<div class="aiActions"><button class="btn small ghost aiGenerate" data-ai-key="${key}">重新生成</button>${ctx.allowComment ? `<button class="btn small ghost aiUseComment" data-ai-key="${key}">放入家长评语</button>` : ""}<button class="aiChangeToken" data-ai-key="${key}">更换访问口令</button></div>` : tokenReady ? `<div class="aiStatus">准备好后手动生成。只会发送本页的题目和原文，不发送姓名、学校、钱包或其他学习记录。</div><button class="btn small aiGenerate" data-ai-key="${key}" style="margin-top:9px">生成 AI 批阅参考</button><button class="aiChangeToken" data-ai-key="${key}">更换访问口令</button>` : `<div class="aiStatus">第一次使用，请输入你在 Worker 中设置的<b>家长访问口令</b>。它只保存在当前浏览器会话，关闭浏览器后自动清除。</div><input class="aiTokenInput" type="password" autocomplete="off" placeholder="Worker 家长访问口令"><button class="btn small aiSaveToken" data-ai-key="${key}" style="margin-top:9px">本次会话使用</button>`}
-    <div class="aiSafe">🔒 DeepSeek API Key 始终保存在 Cloudflare Worker；AI 不打星、不自动提交，也不修改孩子原文。最终评价由家长确认。</div>
+    ${saved ? `${aiResultHtml(saved)}<div class="aiActions"><button class="btn small ghost aiGenerate" data-ai-key="${key}">重新生成</button>${ctx.allowComment ? `<button class="btn small ghost aiUseComment" data-ai-key="${key}">放入家长评语</button>` : ""}<button class="aiChangeToken" data-ai-key="${key}">更换访问口令</button></div>` : tokenReady ? `<div class="aiStatus">准备好后手动生成。只会发送本页的题目和原文，不发送姓名、学校、钱包或其他学习记录。</div><button class="btn small aiGenerate" data-ai-key="${key}" style="margin-top:9px">生成 AI 批阅参考</button><button class="aiChangeToken" data-ai-key="${key}">更换访问口令</button>` : `<div class="aiStatus">第一次使用，请输入你设置的<b>家长访问口令</b>。它只保存在当前浏览器会话，关闭浏览器后自动清除。</div><input class="aiTokenInput" type="password" autocomplete="off" placeholder="48 位家长访问口令"><button class="btn small aiSaveToken" data-ai-key="${key}" style="margin-top:9px">本次会话使用</button>`}
+    <div class="aiSafe">🔒 DeepSeek API Key 始终保存在腾讯云函数；AI 不打星、不自动提交，也不修改孩子原文。最终评价由家长确认。</div>
   </div>`;
 }
 function requestAiReview(key, button, refresh) {
@@ -1206,7 +1206,7 @@ function requestAiReview(key, button, refresh) {
     finished = true; cleanup(); S.aiReviews[key] = { at: todayStr(), data }; save(); refreshView();
   };
   window.addEventListener("message", onMessage);
-  const timer = setTimeout(() => fail("请求超时，请稍后再试"), 45000);
+  const timer = setTimeout(() => fail("请求超时，请稍后再试"), 85000);
   frame.onerror = () => fail("AI 中转页面加载失败，请稍后再试");
   document.body.append(frame, form);
   try { form.submit(); } catch (e) {
@@ -1217,7 +1217,7 @@ function responseIsAuthError(msg) { return String(msg).includes("口令") || Str
 function bindAiPanels(refresh) {
   $$(".aiSaveToken").forEach(b => b.onclick = () => {
     const input = b.closest(".aiRef").querySelector(".aiTokenInput"), v = input.value.trim();
-    if (!v) { toast("先输入 Worker 家长访问口令"); return; }
+    if (!v) { toast("先输入家长访问口令"); return; }
     const pendingComment = $("#cmtArea") ? $("#cmtArea").value : null;
     try { sessionStorage.setItem(AI_TOKEN_KEY, v); } catch (e) {}
     refresh();

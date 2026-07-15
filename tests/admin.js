@@ -58,7 +58,7 @@ const S = () => w.eval("S");
   ok($("#scr-reviewOne").innerHTML.includes("绿色的大馒头"), "★ 能读到孩子写的全文");
   ok($("#scr-reviewOne").innerHTML.includes("比喻") || $("#scr-reviewOne").innerHTML.includes("五感"), "★ 系统列出检测到的技巧（供参考）");
   ok($("#scr-reviewOne").innerHTML.includes("好不好，只有你能判"), "★ 明确：系统只判用没用，好坏由家长判");
-  ok($("#scr-reviewOne").innerHTML.includes("AI 批阅参考") && !!$("#scr-reviewOne .aiTokenInput"), "★ 原文下方有 AI 参考区，首次使用需输入 Worker 家长口令");
+  ok($("#scr-reviewOne").innerHTML.includes("AI 批阅参考") && !!$("#scr-reviewOne .aiTokenInput"), "★ 原文下方有 AI 参考区，首次使用需输入家长口令");
   ok(w.document.activeElement !== $("#scr-reviewOne .aiTokenInput") && w.document.activeElement !== $("#cmtArea"), "★ 进入批阅页不自动聚焦任何输入框");
   ok($$("#scoreRow [data-score]").length === 5, "5 星打分");
   ok(!!$("#cmtArea"), "有评语输入框");
@@ -74,7 +74,7 @@ const S = () => w.eval("S");
     const fields = Object.fromEntries([...this.elements].map(el => [el.name, el.value]));
     aiRequest = { action:this.action, method:this.method, target:this.target, fields, hasFrame:!!w.document.querySelector(`iframe[name="${this.target}"]`) };
     setTimeout(() => w.dispatchEvent(new w.MessageEvent("message", {
-      origin:"https://chinese-writing-ai.1195689456houjunchen.workers.dev",
+      origin:"https://1454399073-kdjvn8zqkf.ap-guangzhou.tencentscf.com",
       data:{source:"treasure-writing-ai",requestId:fields.requestId,data:{ok:true,review:{
         highlight:{quote:"绿色的大馒头",reason:"让山的样子很具体。"},
         checks:[{quote:"一个个",issue:"可以请孩子自己检查是否需要保留。"}],
@@ -87,15 +87,15 @@ const S = () => w.eval("S");
   $("#scr-reviewOne .aiGenerate").click();
   await sleep(30);
   const aiBody = JSON.parse(aiRequest.fields.payload);
-  ok(aiRequest.action.includes("chinese-writing-ai") && aiRequest.method === "post" && aiRequest.fields.transport === "iframe" && aiRequest.hasFrame, "★ AI 经隐藏表单和 iframe 访问 Worker，不使用 fetch/CORS/OPTIONS");
+  ok(aiRequest.action.includes("ap-guangzhou.tencentscf.com") && aiRequest.method === "post" && aiRequest.fields.transport === "iframe" && aiRequest.hasFrame, "★ AI 经隐藏表单和 iframe 访问腾讯云广州函数，不使用 fetch/CORS/OPTIONS");
   ok(aiBody.reviewToken === "review-secret", "★ 访问口令经 HTTPS 请求正文发送，不再放在自定义请求头");
-  ok(aiBody.text.includes("绿色的大馒头") && aiBody.grade === "小学四年级", "★ Worker 收到当前题目和原文及四年级信息");
+  ok(aiBody.text.includes("绿色的大馒头") && aiBody.grade === "小学四年级", "★ 云函数收到当前题目和原文及四年级信息");
   ok(aiBody.requirements.includes("不打总分") && !aiBody.name && !aiBody.wallet, "★ 请求明确不打总分，且不发送姓名或钱包数据");
-  ok($("#scr-reviewOne").textContent.includes("让山的样子很具体") && $("#scr-reviewOne").textContent.includes("一个优先建议") && $("#scr-reviewOne").textContent.includes("雪白的米粉"), "★ 完整兼容 Worker 的亮点、检查、一个建议和示范修改结构");
+  ok($("#scr-reviewOne").textContent.includes("让山的样子很具体") && $("#scr-reviewOne").textContent.includes("一个优先建议") && $("#scr-reviewOne").textContent.includes("雪白的米粉"), "★ 完整兼容云函数的亮点、检查、一个建议和示范修改结构");
   ok(!w.document.querySelector(`iframe[name="${aiRequest.target}"]`), "★ 收到结果后立即清理隐藏表单和 iframe");
   ok($("#cmtArea").value.includes("还没提交"), "★ AI 返回后仍保留家长未提交的评语");
   $("#scr-reviewOne .aiUseComment").click();
-  ok($("#cmtArea").value.includes("我喜欢绿色的大馒头") && w.document.activeElement !== $("#cmtArea"), "★ Worker 的家长评语草稿可放入输入框，但不自动弹出键盘");
+  ok($("#cmtArea").value.includes("我喜欢绿色的大馒头") && w.document.activeElement !== $("#cmtArea"), "★ 云函数的家长评语草稿可放入输入框，但不自动弹出键盘");
   ok(!w.localStorage.getItem("treasureWriting_v1").includes("review-secret"), "★ 访问口令不写入长期存储或备份状态");
   $("#cmtArea").value = "";
 
