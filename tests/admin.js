@@ -57,9 +57,36 @@ const S = () => w.eval("S");
   ok($("#scr-reviewOne").innerHTML.includes("绿色的大馒头"), "★ 能读到孩子写的全文");
   ok($("#scr-reviewOne").innerHTML.includes("比喻") || $("#scr-reviewOne").innerHTML.includes("五感"), "★ 系统列出检测到的技巧（供参考）");
   ok($("#scr-reviewOne").innerHTML.includes("好不好，只有你能判"), "★ 明确：系统只判用没用，好坏由家长判");
-  ok($("#scr-reviewOne").innerHTML.includes("AI 批阅参考") && $("#scr-reviewOne").innerHTML.includes("尚未安全接入"), "★ 原文下方预留 AI 批阅区，但暂不上传内容");
+  ok($("#scr-reviewOne").innerHTML.includes("AI 批阅参考") && !!$("#scr-reviewOne .aiTokenInput"), "★ 原文下方有 AI 参考区，首次使用需输入 Worker 家长口令");
   ok($$("#scoreRow [data-score]").length === 5, "5 星打分");
   ok(!!$("#cmtArea"), "有评语输入框");
+
+  // 接入测试：口令只进 sessionStorage；原文经 Worker 发送；AI 不打分、不改原文
+  $("#cmtArea").value = "这是一条还没提交的家长评语";
+  $("#scr-reviewOne .aiTokenInput").value = "review-secret";
+  $("#scr-reviewOne .aiSaveToken").click();
+  ok(w.sessionStorage.getItem("twAiReviewToken_v1") === "review-secret", "★ AI 访问口令只保存在当前会话");
+  ok($("#cmtArea").value.includes("还没提交"), "★ 设置口令不会弄丢尚未提交的家长评语");
+  let aiRequest;
+  w.fetch = async (url, options) => {
+    aiRequest = { url, options };
+    return { ok:true, status:200, json:async () => ({ ok:true, review:{
+      highlights:["“绿色的大馒头”让山的样子很具体。"],
+      checks:["可以请孩子自己检查‘一个个’是否需要保留。"],
+      suggestion:"下一次只补一句米粉的颜色。",
+      rewrite:{ original:"米粉滑溜溜的。", suggested:"雪白的米粉滑溜溜地钻进筷子间。" }
+    } }) };
+  };
+  $("#scr-reviewOne .aiGenerate").click();
+  await sleep(30);
+  const aiBody = JSON.parse(aiRequest.options.body);
+  ok(aiRequest.url.includes("chinese-writing-ai") && aiRequest.options.headers["X-Review-Token"] === "review-secret", "★ AI 请求只通过配置好的安全 Worker");
+  ok(aiBody.text.includes("绿色的大馒头") && aiBody.grade === "小学四年级", "★ Worker 收到当前题目和原文及四年级信息");
+  ok(aiBody.requirements.includes("不打总分") && !aiBody.name && !aiBody.wallet, "★ 请求明确不打总分，且不发送姓名或钱包数据");
+  ok($("#scr-reviewOne").textContent.includes("一个优先建议") && $("#scr-reviewOne").textContent.includes("雪白的米粉"), "★ AI 参考按亮点、检查、一个建议和示范修改展示");
+  ok($("#cmtArea").value.includes("还没提交"), "★ AI 返回后仍保留家长未提交的评语");
+  ok(!w.localStorage.getItem("treasureWriting_v1").includes("review-secret"), "★ 访问口令不写入长期存储或备份状态");
+  $("#cmtArea").value = "";
 
   // 不打分不能提交
   $("#cmtSave").click();
@@ -113,7 +140,7 @@ const S = () => w.eval("S");
   ok($("#scr-review").textContent.includes("用比喻写桂林的山") && $("#scr-review").textContent.includes("给李白一部手机"), "★ 同页显示训练题目和孩子原文");
   $$("#scr-review .workItem")[0].click();
   ok($("#scr-reviewOne").textContent.includes("孩子的原文") && $("#scr-reviewOne").textContent.includes("绿色的大馒头"), "★ 不退出后台即可查看单条完整训练结果");
-  ok($("#scr-reviewOne").textContent.includes("AI 批阅参考") && $("#scr-reviewOne button").disabled, "★ 日常训练也有未接入的 AI 参考位");
+  ok($("#scr-reviewOne").textContent.includes("AI 批阅参考") && !!$("#scr-reviewOne .aiGenerate"), "★ 日常训练也可由家长手动生成 AI 参考");
   w.eval(`S.gems=[{txt:"桂林的山像绿色的大馒头",tool:"simile",from:"桂林",d:todayStr(),stars:3}];save();`);
 
   console.log("\n⑦ 奖励与共享钱包");

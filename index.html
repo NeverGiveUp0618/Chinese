@@ -266,8 +266,23 @@ body {
 .workMeta { color:#a58d6b; font-size:10px; margin-top:7px; }
 .aiRef { border:1.5px dashed #bda8cf; background:linear-gradient(145deg,#fbf8ff,#f3edf8); }
 .aiRef .aiTitle { color:#75578f; font-size:14px; font-weight:800; }
+.aiRef .aiTitle span { margin-left:5px; border-radius:10px; background:#e9dff1; padding:2px 7px; color:#876e99; font-size:9px; vertical-align:2px; }
 .aiRef .aiStatus { margin-top:6px; color:#766b80; font-size:12px; line-height:1.75; }
 .aiRef .aiSafe { margin-top:8px; padding:7px 9px; border-radius:9px; background:#fff; color:#9a87a7; font-size:10px; line-height:1.55; }
+.aiTokenInput { width:100%; box-sizing:border-box; margin-top:9px; border:1.5px solid #cfbddc; border-radius:10px; background:#fff; padding:10px 11px; color:#574661; font:inherit; font-size:13px; outline:none; }
+.aiTokenInput:focus { border-color:#8c6ca4; box-shadow:0 0 0 3px rgba(140,108,164,.1); }
+.aiResult { display:grid; gap:8px; margin-top:10px; }
+.aiPart { border-radius:11px; background:rgba(255,255,255,.8); padding:9px 10px; color:#65566e; font-size:12px; line-height:1.65; }
+.aiPart.good { border-left:3px solid #d6a642; }
+.aiPart.check { border-left:3px solid #8196ad; }
+.aiPart.suggest { border-left:3px solid #9b76b0; }
+.aiPart.rewrite { border-left:3px solid #6e9e82; }
+.aiPart b { display:block; margin-bottom:3px; color:#665071; font-size:11px; }
+.aiPart p { margin:3px 0; white-space:pre-wrap; }
+.aiPart p span { display:inline-block; min-width:32px; margin-right:6px; color:#9a83a6; font-size:10px; font-weight:800; }
+.aiPart small { display:block; margin-top:5px; color:#a394aa; font-size:9px; }
+.aiActions { display:flex; flex-wrap:wrap; align-items:center; gap:6px; margin-top:10px; }
+.aiChangeToken { border:0; background:transparent; padding:5px; color:#9a83a6; font:inherit; font-size:10px; text-decoration:underline; cursor:pointer; }
 .parentStats { display:grid; grid-template-columns:repeat(3,1fr); gap:7px; text-align:center; }
 .parentStats div { min-width:0; padding:4px 2px; }
 .parentStats b { display:block; color:#b87324; font-size:20px; }

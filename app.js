@@ -18,6 +18,9 @@ function dateAdd(n) { const d = new Date(Date.now() + n * 864e5); return d.getFu
 const LS_KEY = "treasureWriting_v1";
 /* 和英语App共享的钱包：同一个域，localStorage 互通 —— 两个学科，一只宠物 */
 const WALLET_KEY = "sharedWallet_v1";
+/* DeepSeek 只通过 Cloudflare Worker 调用；家长访问口令仅存 sessionStorage，绝不进仓库或备份 */
+const AI_REVIEW_URL = "https://chinese-writing-ai.1195689456houjunchen.workers.dev/";
+const AI_TOKEN_KEY = "twAiReviewToken_v1";
 
 function defState() {
   return {
@@ -29,6 +32,7 @@ function defState() {
     remixes: [],    // 宝物变身记录：{from,tool,d,hit}，只记是否用了技巧，不评好坏
     gear: { head: "", hand: "", back: "" }, // 小獾探险装备：只解锁，不磨损、不降级
     essays: {},     // essayId -> {paras:[], done:bool, score:0}
+    aiReviews: {},  // 家长端 AI 批阅参考（只存结果，不存访问口令）
     checkins: {},
     testMode: false // 家长测试模式：全部解锁，给孩子用前记得关掉
   };
@@ -36,6 +40,7 @@ function defState() {
 let S = defState();
 try { const raw = localStorage.getItem(LS_KEY); if (raw) S = Object.assign(defState(), JSON.parse(raw)); } catch (e) {}
 S.gear = Object.assign(defState().gear, S.gear || {});
+S.aiReviews = S.aiReviews || {};
 if (S.daily.date !== todayStr()) S.daily = defState().daily;
 function save() { try { localStorage.setItem(LS_KEY, JSON.stringify(S)); } catch (e) {} }
 
@@ -968,7 +973,7 @@ function renderParent() {
     <div class="card" style="font-size:12.5px;color:#6a5a42;line-height:1.9">
       <b style="color:#8a6a2a">这个后台最重要的一件事：</b><br>
       系统只能判断她<b>用没用某个技巧</b>（比喻、五感、动作分解……），<b>但「写得好不好」判不了，也不该判</b>。<br>
-      但作文<b>写得好不好，只有人能给判断</b>。所以家长批阅仍是完整作文的<b>最后一环</b>：由你读、你打分、你写评语。AI 批阅区目前只做好界面，尚未安全接入，也不会把孩子的文字发送到任何外部服务。
+      但作文<b>写得好不好，只有人能给判断</b>。所以家长批阅仍是完整作文的<b>最后一环</b>：由你读、你打分、你写评语。AI 只在你手动点击后生成参考，不打星，也不会自动修改或提交。
     </div>`;
 
   if (pending) $("#pendBanner").onclick = () => go(renderReview);
@@ -1082,13 +1087,131 @@ function oldGemPrompt(g, k) {
   const t = TOOLS.find(x => x.id === g.tool);
   return `${g.from || "城市"}练笔 · ${t ? "练习「" + t.short + "」" : "原题未保存"}`;
 }
-function renderAiPlaceholder() {
-  return `<div class="card aiRef">
-    <div class="aiTitle">✨ AI 批阅参考</div>
-    <div class="aiStatus"><b>尚未安全接入。</b>目前不会上传孩子的文字，也不会生成虚假的 AI 评价。后续接入后，这里会显示：原句亮点、疑似需检查处、一个优先建议和一处示范修改。</div>
-    <div class="aiSafe">🔒 DeepSeek 密钥不会放进网页代码；完成安全中转服务后才会启用。</div>
-    <button class="btn small ghost" disabled style="margin-top:9px">等待安全接入</button>
+let aiContexts = {};
+function aiHash(s) {
+  let h = 2166136261;
+  for (const ch of String(s)) { h ^= ch.codePointAt(0); h = Math.imul(h, 16777619); }
+  return (h >>> 0).toString(36);
+}
+function aiToken() { try { return sessionStorage.getItem(AI_TOKEN_KEY) || ""; } catch (e) { return ""; } }
+function aiList(v) {
+  if (!v) return [];
+  if (Array.isArray(v)) return v.map(x => typeof x === "string" ? x : (x.text || x.content || JSON.stringify(x))).filter(Boolean);
+  return [String(v)];
+}
+function normalizeAiReview(raw) {
+  let x = raw;
+  for (let i = 0; i < 3 && x && typeof x === "object"; i++) {
+    const nested = x.review || x.result || x.data;
+    if (!nested || nested === x) break;
+    x = nested;
+  }
+  if (typeof x === "string") { try { x = JSON.parse(x); } catch (e) { x = { summary: x }; } }
+  x = x || {};
+  const rwRaw = x.rewrite || x.exampleRewrite || x.example || x["示范修改"] || {};
+  const rw = typeof rwRaw === "string" ? { suggested: rwRaw } : rwRaw;
+  const out = {
+    highlights: aiList(x.highlights || x.strengths || x.goodPoints || x["亮点"] || x["写得好的地方"]),
+    checks: aiList(x.checks || x.issues || x.possibleIssues || x["疑似需检查"] || x["需要检查"]),
+    suggestion: String(x.suggestion || x.prioritySuggestion || x.improvement || x["优先建议"] || x["修改建议"] || ""),
+    original: String(rw.original || rw.before || x.original || x["原句"] || ""),
+    rewrite: String(rw.suggested || rw.after || rw.rewrite || x.rewritten || x["建议句"] || ""),
+    summary: String(x.summary || x.content || x.message || x["总体参考"] || ""),
+    commentDraft: String(x.commentDraft || x.parentComment || x["家长评语草稿"] || "")
+  };
+  return out;
+}
+function aiResultHasContent(r) {
+  return r && (r.highlights.length || r.checks.length || r.suggestion || r.rewrite || r.summary || r.commentDraft);
+}
+function aiResultHtml(r) {
+  return `<div class="aiResult">
+    ${r.highlights.length ? `<div class="aiPart good"><b>🌟 原文亮点</b>${r.highlights.map(x => `<p>${esc(x)}</p>`).join("")}</div>` : ""}
+    ${r.checks.length ? `<div class="aiPart check"><b>🔎 疑似需要检查</b>${r.checks.map(x => `<p>${esc(x)}</p>`).join("")}</div>` : ""}
+    ${r.suggestion ? `<div class="aiPart suggest"><b>🎯 一个优先建议</b><p>${esc(r.suggestion)}</p></div>` : ""}
+    ${r.original || r.rewrite ? `<div class="aiPart rewrite"><b>✏️ 一处示范修改</b>${r.original ? `<p><span>原句</span>${esc(r.original)}</p>` : ""}${r.rewrite ? `<p><span>建议</span>${esc(r.rewrite)}</p>` : ""}<small>只供参考，不会覆盖孩子原文。</small></div>` : ""}
+    ${r.summary ? `<div class="aiPart"><b>💬 其他参考</b><p>${esc(r.summary)}</p></div>` : ""}
   </div>`;
+}
+function aiCommentDraft(r) {
+  if (r.commentDraft) return r.commentDraft;
+  const a = r.highlights[0] ? `我很喜欢你写的这处：${r.highlights[0]}` : "我认真读完了你的作文，看见你把自己的想法写完整了。";
+  return r.suggestion ? `${a}\n下次可以试试：${r.suggestion}` : a;
+}
+function renderAiPanel(ctx) {
+  const key = `${ctx.kind}:${ctx.id || "item"}:${aiHash(ctx.text)}`;
+  aiContexts[key] = ctx;
+  const saved = S.aiReviews[key] && S.aiReviews[key].data;
+  const tokenReady = !!aiToken();
+  return `<div class="card aiRef" data-ai-card="${key}">
+    <div class="aiTitle">✨ AI 批阅参考 <span>仅家长可见</span></div>
+    ${saved ? `${aiResultHtml(saved)}<div class="aiActions"><button class="btn small ghost aiGenerate" data-ai-key="${key}">重新生成</button>${ctx.allowComment ? `<button class="btn small ghost aiUseComment" data-ai-key="${key}">放入家长评语</button>` : ""}<button class="aiChangeToken" data-ai-key="${key}">更换访问口令</button></div>` : tokenReady ? `<div class="aiStatus">准备好后手动生成。只会发送本页的题目和原文，不发送姓名、学校、钱包或其他学习记录。</div><button class="btn small aiGenerate" data-ai-key="${key}" style="margin-top:9px">生成 AI 批阅参考</button><button class="aiChangeToken" data-ai-key="${key}">更换访问口令</button>` : `<div class="aiStatus">第一次使用，请输入你在 Worker 中设置的<b>家长访问口令</b>。它只保存在当前浏览器会话，关闭浏览器后自动清除。</div><input class="aiTokenInput" type="password" autocomplete="off" placeholder="Worker 家长访问口令"><button class="btn small aiSaveToken" data-ai-key="${key}" style="margin-top:9px">本次会话使用</button>`}
+    <div class="aiSafe">🔒 DeepSeek API Key 始终保存在 Cloudflare Worker；AI 不打星、不自动提交，也不修改孩子原文。最终评价由家长确认。</div>
+  </div>`;
+}
+async function requestAiReview(key, button, refresh) {
+  const ctx = aiContexts[key], token = aiToken();
+  if (!ctx || !token) { refresh(); return; }
+  const pendingComment = $("#cmtArea") ? $("#cmtArea").value : null;
+  const refreshView = () => {
+    refresh();
+    if (pendingComment !== null && $("#cmtArea")) $("#cmtArea").value = pendingComment;
+  };
+  const card = button.closest(".aiRef"), status = card.querySelector(".aiStatus");
+  button.disabled = true; button.textContent = "正在认真阅读…";
+  if (status) status.textContent = "正在通过安全中转生成参考，请稍等。";
+  const controller = new AbortController(), timer = setTimeout(() => controller.abort(), 45000);
+  try {
+    const response = await fetch(AI_REVIEW_URL, {
+      method: "POST", signal: controller.signal,
+      headers: { "Content-Type": "application/json", "X-Review-Token": token },
+      body: JSON.stringify({
+        type: ctx.kind, grade: "小学四年级", title: ctx.title || "日常练笔",
+        prompt: ctx.prompt || "", text: ctx.text, content: ctx.text, essay: ctx.text,
+        targetTechnique: ctx.target || "", sourceText: ctx.sourceText || "",
+        requirements: "只给家长批阅参考：引用原文亮点；指出疑似问题；只给一个优先建议；提供一处示范修改。不打总分，不覆盖原文。"
+      })
+    });
+    const body = await response.json().catch(() => ({}));
+    if (!response.ok || body.ok === false) {
+      if (response.status === 401) { try { sessionStorage.removeItem(AI_TOKEN_KEY); } catch (e) {} }
+      throw new Error(body.error || `服务暂时不可用（${response.status}）`);
+    }
+    const data = normalizeAiReview(body);
+    if (!aiResultHasContent(data)) throw new Error("AI 返回了内容，但格式暂时无法识别");
+    S.aiReviews[key] = { at: todayStr(), data }; save();
+    refreshView();
+  } catch (e) {
+    const msg = e.name === "AbortError" ? "请求超时，请稍后再试" : e.message;
+    toast("AI 批阅失败：" + msg, 3200);
+    if (responseIsAuthError(msg)) refreshView();
+    else { button.disabled = false; button.textContent = "重新尝试"; if (status) status.textContent = msg; }
+  } finally { clearTimeout(timer); }
+}
+function responseIsAuthError(msg) { return String(msg).includes("口令") || String(msg).includes("401"); }
+function bindAiPanels(refresh) {
+  $$(".aiSaveToken").forEach(b => b.onclick = () => {
+    const input = b.closest(".aiRef").querySelector(".aiTokenInput"), v = input.value.trim();
+    if (!v) { toast("先输入 Worker 家长访问口令"); return; }
+    const pendingComment = $("#cmtArea") ? $("#cmtArea").value : null;
+    try { sessionStorage.setItem(AI_TOKEN_KEY, v); } catch (e) {}
+    refresh();
+    if (pendingComment !== null && $("#cmtArea")) $("#cmtArea").value = pendingComment;
+  });
+  $$(".aiChangeToken").forEach(b => b.onclick = () => {
+    const pendingComment = $("#cmtArea") ? $("#cmtArea").value : null;
+    try { sessionStorage.removeItem(AI_TOKEN_KEY); } catch (e) {}
+    refresh();
+    if (pendingComment !== null && $("#cmtArea")) $("#cmtArea").value = pendingComment;
+  });
+  $$(".aiGenerate").forEach(b => b.onclick = () => requestAiReview(b.dataset.aiKey, b, refresh));
+  $$(".aiUseComment").forEach(b => b.onclick = () => {
+    const saved = S.aiReviews[b.dataset.aiKey] && S.aiReviews[b.dataset.aiKey].data, area = $("#cmtArea");
+    if (!saved || !area) return;
+    const draft = aiCommentDraft(saved);
+    area.value = area.value.trim() ? area.value.trim() + "\n" + draft : draft;
+    area.focus(); toast("已放入评语框，请读一遍再提交", 2200);
+  });
 }
 function renderReview(filter = "all") {
   const written = ESSAYS.filter(e => { const es = S.essays[e.id]; return es && (es.paras || []).some(p => p && p.trim()); });
@@ -1156,7 +1279,8 @@ function renderTrainingOne(index) {
       ${k === "idea" ? `<div style="font-size:13px;color:#6a5a42;line-height:1.8">脑洞只记录“愿意写出来”，不检查技巧，也不挑毛病。</div>` : `<div style="font-size:13px;color:#6a5a42;line-height:1.8">目标：${t ? t.name : "自由表达"}<br>${result && result.hit ? "✅ 检测到目标技巧" : "○ 当时未检测到目标技巧，但原文仍被完整保留"}</div>`}
       <div style="font-size:10px;color:#b0997a;margin-top:6px">这里只记录训练事实，不代表写得好不好。</div>
     </div>
-    ${renderAiPlaceholder()}`;
+    ${renderAiPanel({ kind: k, id: `gem-${index}`, title: gemKindName(k), prompt: oldGemPrompt(g, k), text: g.txt, target: t ? t.short : "", sourceText: g.sourceTxt || "" })}`;
+  bindAiPanels(() => renderTrainingOne(index));
   show("reviewOne", "🗂️ 训练详情");
 }
 
@@ -1192,7 +1316,7 @@ function renderReviewOne(eid) {
       </div>
     </div>
 
-    ${renderAiPlaceholder()}
+    ${renderAiPanel({ kind: "essay", id: eid, title: e.title, prompt: e.outline.map(x => `${x.s}：${x.ask}`).join("；"), text: full, target: used.map(t => t.short).join("、"), allowComment: true })}
 
     <div class="card" style="padding:14px">
       <div class="sectionTitle" style="margin:0 0 8px">✍️ 你的批阅</div>
@@ -1207,6 +1331,7 @@ function renderReviewOne(eid) {
       <button class="btn" id="cmtSave">✅ 提交批阅（+ 发 2 张转盘券给她）</button>
     </div>`;
 
+  bindAiPanels(() => renderReviewOne(eid));
   let score = es.score || 0;
   const paint = () => {
     $$("#scoreRow [data-score]").forEach(b => b.classList.toggle("ghost", +b.dataset.score > score));
