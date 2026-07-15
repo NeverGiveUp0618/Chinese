@@ -70,24 +70,29 @@ const S = () => w.eval("S");
   ok(w.sessionStorage.getItem("twAiReviewToken_v1") === "review-secret", "★ AI 访问口令只保存在当前会话");
   ok($("#cmtArea").value.includes("还没提交"), "★ 设置口令不会弄丢尚未提交的家长评语");
   let aiRequest;
-  w.fetch = async (url, options) => {
-    aiRequest = { url, options };
-    return { ok:true, status:200, json:async () => ({ ok:true, review:{
-      highlight:{quote:"绿色的大馒头",reason:"让山的样子很具体。"},
-      checks:[{quote:"一个个",issue:"可以请孩子自己检查是否需要保留。"}],
-      priorityTip:"下一次只补一句米粉的颜色。",
-      rewrite:{ original:"米粉滑溜溜的。", suggestion:"雪白的米粉滑溜溜地钻进筷子间。" },
-      parentCommentDraft:"我喜欢绿色的大馒头这个比喻。下次可以补一句米粉的颜色。"
-    } }) };
+  w.HTMLFormElement.prototype.submit = function () {
+    const fields = Object.fromEntries([...this.elements].map(el => [el.name, el.value]));
+    aiRequest = { action:this.action, method:this.method, target:this.target, fields, hasFrame:!!w.document.querySelector(`iframe[name="${this.target}"]`) };
+    setTimeout(() => w.dispatchEvent(new w.MessageEvent("message", {
+      origin:"https://chinese-writing-ai.1195689456houjunchen.workers.dev",
+      data:{source:"treasure-writing-ai",requestId:fields.requestId,data:{ok:true,review:{
+        highlight:{quote:"绿色的大馒头",reason:"让山的样子很具体。"},
+        checks:[{quote:"一个个",issue:"可以请孩子自己检查是否需要保留。"}],
+        priorityTip:"下一次只补一句米粉的颜色。",
+        rewrite:{ original:"米粉滑溜溜的。", suggestion:"雪白的米粉滑溜溜地钻进筷子间。" },
+        parentCommentDraft:"我喜欢绿色的大馒头这个比喻。下次可以补一句米粉的颜色。"
+      }}}
+    })), 0);
   };
   $("#scr-reviewOne .aiGenerate").click();
   await sleep(30);
-  const aiBody = JSON.parse(aiRequest.options.body);
-  ok(aiRequest.url.includes("chinese-writing-ai") && aiRequest.options.headers["Content-Type"].startsWith("text/plain") && !aiRequest.options.headers["X-Review-Token"], "★ AI 使用无需 OPTIONS 预检的简单请求访问安全 Worker");
+  const aiBody = JSON.parse(aiRequest.fields.payload);
+  ok(aiRequest.action.includes("chinese-writing-ai") && aiRequest.method === "post" && aiRequest.fields.transport === "iframe" && aiRequest.hasFrame, "★ AI 经隐藏表单和 iframe 访问 Worker，不使用 fetch/CORS/OPTIONS");
   ok(aiBody.reviewToken === "review-secret", "★ 访问口令经 HTTPS 请求正文发送，不再放在自定义请求头");
   ok(aiBody.text.includes("绿色的大馒头") && aiBody.grade === "小学四年级", "★ Worker 收到当前题目和原文及四年级信息");
   ok(aiBody.requirements.includes("不打总分") && !aiBody.name && !aiBody.wallet, "★ 请求明确不打总分，且不发送姓名或钱包数据");
   ok($("#scr-reviewOne").textContent.includes("让山的样子很具体") && $("#scr-reviewOne").textContent.includes("一个优先建议") && $("#scr-reviewOne").textContent.includes("雪白的米粉"), "★ 完整兼容 Worker 的亮点、检查、一个建议和示范修改结构");
+  ok(!w.document.querySelector(`iframe[name="${aiRequest.target}"]`), "★ 收到结果后立即清理隐藏表单和 iframe");
   ok($("#cmtArea").value.includes("还没提交"), "★ AI 返回后仍保留家长未提交的评语");
   $("#scr-reviewOne .aiUseComment").click();
   ok($("#cmtArea").value.includes("我喜欢绿色的大馒头") && w.document.activeElement !== $("#cmtArea"), "★ Worker 的家长评语草稿可放入输入框，但不自动弹出键盘");

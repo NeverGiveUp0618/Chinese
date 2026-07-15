@@ -1155,7 +1155,7 @@ function renderAiPanel(ctx) {
     <div class="aiSafe">🔒 DeepSeek API Key 始终保存在 Cloudflare Worker；AI 不打星、不自动提交，也不修改孩子原文。最终评价由家长确认。</div>
   </div>`;
 }
-async function requestAiReview(key, button, refresh) {
+function requestAiReview(key, button, refresh) {
   const ctx = aiContexts[key], token = aiToken();
   if (!ctx || !token) { refresh(); return; }
   const pendingComment = $("#cmtArea") ? $("#cmtArea").value : null;
@@ -1166,36 +1166,52 @@ async function requestAiReview(key, button, refresh) {
   const card = button.closest(".aiRef"), status = card.querySelector(".aiStatus");
   button.disabled = true; button.textContent = "正在认真阅读…";
   if (status) status.textContent = "正在通过安全中转生成参考，请稍等。";
-  const controller = new AbortController(), timer = setTimeout(() => controller.abort(), 45000);
-  try {
-    const response = await fetch(AI_REVIEW_URL, {
-      method: "POST", signal: controller.signal,
-      // text/plain 属于 CORS 简单请求，可绕开部分大陆网络对 OPTIONS 预检的不稳定拦截。
-      headers: { "Content-Type": "text/plain;charset=UTF-8" },
-      body: JSON.stringify({
-        reviewToken: token,
-        type: ctx.kind, grade: "小学四年级", title: ctx.title || "日常练笔",
-        prompt: ctx.prompt || "", text: ctx.text, content: ctx.text, essay: ctx.text,
-        targetTechnique: ctx.target || "", sourceText: ctx.sourceText || "",
-        requirements: "只给家长批阅参考：引用原文亮点；指出疑似问题；只给一个优先建议；提供一处示范修改。不打总分，不覆盖原文。"
-      })
-    });
-    const body = await response.json().catch(() => ({}));
-    if (!response.ok || body.ok === false) {
-      if (response.status === 401) { try { sessionStorage.removeItem(AI_TOKEN_KEY); } catch (e) {} }
-      throw new Error(body.error || `服务暂时不可用（${response.status}）`);
-    }
-    const data = normalizeAiReview(body);
-    if (!aiResultHasContent(data)) throw new Error("AI 返回了内容，但格式暂时无法识别");
-    S.aiReviews[key] = { at: todayStr(), data }; save();
-    refreshView();
-  } catch (e) {
-    const rawMsg = String(e.message || "");
-    const msg = e.name === "AbortError" ? "请求超时，请稍后再试" : /failed to fetch|networkerror|load failed/i.test(rawMsg) ? "无法连接 AI 服务，请换一个网络后重试" : rawMsg;
-    toast("AI 批阅失败：" + msg, 3200);
-    if (responseIsAuthError(msg)) refreshView();
+  const requestId = `tw-ai-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  const frameName = `twAiFrame_${aiHash(requestId)}`;
+  const frame = document.createElement("iframe");
+  frame.name = frameName; frame.setAttribute("aria-hidden", "true"); frame.style.display = "none";
+  const form = document.createElement("form");
+  form.method = "POST"; form.action = AI_REVIEW_URL; form.target = frameName;
+  form.enctype = "application/x-www-form-urlencoded"; form.style.display = "none";
+  const addField = (name, value) => {
+    const input = document.createElement("input"); input.type = "hidden"; input.name = name; input.value = value; form.appendChild(input);
+  };
+  const payload = {
+    reviewToken: token,
+    type: ctx.kind, grade: "小学四年级", title: ctx.title || "日常练笔",
+    prompt: ctx.prompt || "", text: ctx.text, content: ctx.text, essay: ctx.text,
+    targetTechnique: ctx.target || "", sourceText: ctx.sourceText || "",
+    requirements: "只给家长批阅参考：引用原文亮点；指出疑似问题；只给一个优先建议；提供一处示范修改。不打总分，不覆盖原文。"
+  };
+  addField("transport", "iframe"); addField("requestId", requestId); addField("payload", JSON.stringify(payload));
+  let finished = false;
+  const cleanup = () => {
+    window.removeEventListener("message", onMessage);
+    clearTimeout(timer); form.remove(); frame.remove();
+  };
+  const fail = (msg, code = 0) => {
+    if (finished) return; finished = true;
+    if (code === 401 || responseIsAuthError(msg)) { try { sessionStorage.removeItem(AI_TOKEN_KEY); } catch (e) {} }
+    cleanup(); toast("AI 批阅失败：" + msg, 3200);
+    if (code === 401 || responseIsAuthError(msg)) refreshView();
     else { button.disabled = false; button.textContent = "重新尝试"; if (status) status.textContent = msg; }
-  } finally { clearTimeout(timer); }
+  };
+  const onMessage = event => {
+    const msg = event.data || {};
+    if (event.origin !== new URL(AI_REVIEW_URL).origin || msg.source !== "treasure-writing-ai" || msg.requestId !== requestId) return;
+    const body = msg.data || {};
+    if (body.ok === false) { fail(body.error || `服务暂时不可用（${body.httpStatus || 0}）`, body.httpStatus || 0); return; }
+    const data = normalizeAiReview(body);
+    if (!aiResultHasContent(data)) { fail("AI 返回了内容，但格式暂时无法识别"); return; }
+    finished = true; cleanup(); S.aiReviews[key] = { at: todayStr(), data }; save(); refreshView();
+  };
+  window.addEventListener("message", onMessage);
+  const timer = setTimeout(() => fail("请求超时，请稍后再试"), 45000);
+  frame.onerror = () => fail("AI 中转页面加载失败，请稍后再试");
+  document.body.append(frame, form);
+  try { form.submit(); } catch (e) {
+    fail("当前浏览器无法提交 AI 批阅，请在系统浏览器中重试");
+  }
 }
 function responseIsAuthError(msg) { return String(msg).includes("口令") || String(msg).includes("401"); }
 function bindAiPanels(refresh) {
