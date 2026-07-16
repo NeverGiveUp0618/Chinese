@@ -67,16 +67,21 @@ function loadSharedPet() {
 function safePetNum(v, fallback, min, max) {
   v = Number(v); return Number.isFinite(v) ? Math.max(min, Math.min(max, v)) : fallback;
 }
-function sharedPetLayers(size) {
-  return loadSharedPet().items.slice(0, 20).map(it => {
+function sharedPetLayers(size, backLayer) {
+  return loadSharedPet().items.slice(0, 30).filter(it => {
+    const id = String(it.id || "");
+    const cape = ["bb_wedding","bb_pinkdress","bb_bluedress","bb_tutu","bb_shirt","bb_coat","bb_vest"].includes(id) || id.startsWith("bb_cx_");
+    return !!backLayer === cape;
+  }).map(it => {
     const x = safePetNum(it.x, 50, 0, 100), y = safePetNum(it.y, 50, 0, 100);
     const s = safePetNum(it.s, 1, .3, 3), r = safePetNum(it.r, 0, -360, 360);
     const base = safePetNum(it.base, .3, .2, 1.2);
+    const hue = safePetNum(it.hue, 0, 0, 360);
     const art = String(it.art || "");
     /* 只接受英语项目内置的透明装扮图，拒绝存档里任意外链或 HTML。 */
     const safeArt = /^https:\/\/nevergiveup0618\.github\.io\/English\/assets\/outfits\/[a-z0-9-]+\.svg$/.test(art);
     const sizeStyle = safeArt ? `width:${Math.round(size * base * s)}px` : `font-size:${Math.round(size * .3 * s)}px`;
-    return `<span class="buddyShared" style="left:${x}%;top:${y}%;${sizeStyle};transform:translate(-50%,-50%) rotate(${r}deg)">${safeArt ? `<img src="${art}" alt="">` : esc(it.e || "")}</span>`;
+    return `<span class="buddyShared ${backLayer ? "back" : ""}" style="left:${x}%;top:${y}%;${sizeStyle};transform:translate(-50%,-50%) rotate(${r}deg)">${safeArt ? `<img src="${art}" alt=""${hue ? ` style="filter:hue-rotate(${hue}deg)"` : ""}>` : esc(it.e || "")}</span>`;
   }).join("");
 }
 let W = loadWallet();
@@ -208,7 +213,7 @@ function buddyAvatar(id, size, withGear) {
   const sz = size || 116;
   const gear = S.gear || {}, head = GEARS.find(g => g.id === gear.head), hand = GEARS.find(g => g.id === gear.hand), back = GEARS.find(g => g.id === gear.back);
   const showGear = withGear !== false;
-  return `<span class="buddyAvatar" ${id ? `id="${id}"` : ""} style="width:${sz}px;height:${sz}px">${showGear && back ? `<span class="buddyGear back">${back.icon}</span>` : ""}<img class="buddyBodyImg" src="assets/baibai-base.png" alt="白白">${sharedPetLayers(sz)}${showGear && head ? `<span class="buddyGear head">${head.icon}</span>` : ""}${showGear && hand ? `<span class="buddyGear hand">${hand.icon}</span>` : ""}</span>`;
+  return `<span class="buddyAvatar" ${id ? `id="${id}"` : ""} style="width:${sz}px;height:${sz}px">${showGear && back ? `<span class="buddyGear back">${back.icon}</span>` : ""}${sharedPetLayers(sz, true)}<img class="buddyBodyImg" src="assets/baibai-base.png" alt="白白">${sharedPetLayers(sz, false)}${showGear && head ? `<span class="buddyGear head">${head.icon}</span>` : ""}${showGear && hand ? `<span class="buddyGear hand">${hand.icon}</span>` : ""}</span>`;
 }
 function buddyMark(size) { return buddyAvatar("", size || 42, false); }
 
