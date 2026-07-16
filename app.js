@@ -1163,8 +1163,6 @@ function aiResultHtml(r) {
   return `<div class="aiResult">
     ${r.highlights.length ? `<div class="aiPart good"><b>🌟 原文亮点</b>${r.highlights.map(x => `<p>${esc(x)}</p>`).join("")}</div>` : ""}
     ${r.checks.length ? `<div class="aiPart check"><b>🔎 疑似需要检查</b>${r.checks.map(x => `<p>${esc(x)}</p>`).join("")}</div>` : ""}
-    ${r.suggestion ? `<div class="aiPart suggest"><b>🎯 一个优先建议</b><p>${esc(r.suggestion)}</p></div>` : ""}
-    ${r.original || r.examples.length ? `<div class="aiPart rewrite"><b>✏️ 参考写法（${r.examples.length} 条）</b>${r.original ? `<p><span>原句</span>${esc(r.original)}</p>` : ""}${r.examples.map((x, i) => `<p class="aiExampleText"><span>${esc(x.label || `写法 ${i + 1}`)}</span>${esc(x.text)}</p>`).join("")}<small>只供参考，不会覆盖孩子原文；建议和例句可以给孩子看。</small></div>` : ""}
     ${r.summary ? `<div class="aiPart"><b>💬 其他参考</b><p>${esc(r.summary)}</p></div>` : ""}
   </div>`;
 }
@@ -1260,7 +1258,7 @@ function renderAiPanel(ctx) {
     <div class="aiTitle">✨ AI 批阅参考 <span>仅家长可见</span></div>
     ${saved ? `${aiResultHtml(saved)}${tokenReady ? savedActions : tokenForm}` : tokenReady ? `<div class="aiStatus">准备好后手动生成。只会发送本页的题目和原文，不发送姓名、学校、钱包或其他学习记录。</div><button class="btn small aiGenerate" data-ai-key="${key}" style="margin-top:9px">生成 AI 批阅参考</button><button class="aiChangeToken" data-ai-key="${key}">更换访问口令</button>` : tokenForm}
     ${deviceReady ? `<div class="aiChildState on">✅ 这台设备已开启：孩子点“让小獾看看”会直接收到 AI 建议和三条例句。</div>` : tokenReady ? `<button class="btn small ghost aiEnableChild" style="margin-top:8px">在这台设备开启“小獾 AI 即时灵感”</button>` : ""}
-    <div class="aiSafe">🔒 DeepSeek API Key 始终保存在腾讯云函数。设备授权口令单独保存在这台设备，不进入学习备份；孩子看不到口令，也不会看到评分、疑似问题或家长评语草稿。</div>
+    <div class="aiSafe">🔒 DeepSeek API Key 始终保存在腾讯云函数。家长端只看亮点和疑似检查；优化建议与三条例句只在孩子点“让小獾看看”后出现。孩子看不到口令、评分、疑似问题或家长评语草稿。</div>
   </div>`;
 }
 function requestAiReview(key, button, refresh) {
