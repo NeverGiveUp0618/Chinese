@@ -28,7 +28,16 @@ const ok = (c, m) => { c ? pass++ : fail++; console.log(`  ${c ? "✓" : "✗ FA
   w.localStorage.setItem("sharedPet_v1", JSON.stringify({v:1,name:"白白",items:[{id:"bb_bow",e:"🎀",x:30,y:20,s:.6,r:-10}]}));
   w.eval("renderHome()");
   ok($("#buddyE .buddyShared")?.textContent === "🎀", "★ 英语保存的白白装扮会同步到语文");
-  ok($("#goEnglishWardrobe")?.textContent.includes("去英语给白白挑裙子"), "★ 语文赚的共享金币有清楚的白白衣橱去向");
+  w.localStorage.setItem("sharedPet_v1", JSON.stringify({v:1,name:"白白",items:[{id:"bb_coat",e:"🌲",art:"https://nevergiveup0618.github.io/English/assets/outfits/cape-forest.svg",base:1,x:50,y:50,s:1,r:0}]}));
+  w.eval("renderHome()");
+  ok($("#buddyE .buddyShared img")?.src.endsWith("/English/assets/outfits/cape-forest.svg"), "★ 英语的宠物披风图片也按同一位置同步到语文");
+  ok($("#goEnglishWardrobe")?.textContent.includes("去英语给白白挑"), "★ 语文赚的共享金币有清楚的白白衣橱去向");
+  ok($("#backBtn").style.visibility === "hidden", "★ 语文营地不显示无意义的页内返回箭头");
+  $("#goGems").click();
+  ok($$(".tab").find(t => t.dataset.tab === "gems").classList.contains("on"), "★ 从营地进宝库时，高亮宝库而不是营地");
+  ok($("#backBtn").style.visibility === "visible", "★ 进入语文子页面后显示页内返回箭头");
+  $("#backBtn").click();
+  ok($("#scr-home").classList.contains("on") && $$(".tab").find(t => t.dataset.tab === "home").classList.contains("on"), "★ 页内返回回到营地并恢复营地高亮");
   ok($("#scr-home").innerHTML.includes("今日探险"), "今日探险任务卡");
   ok($$(".tab").length === 5, "5个导航（营地/寻宝/脑洞/法宝/宝库）");
 

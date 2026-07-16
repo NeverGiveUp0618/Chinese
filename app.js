@@ -71,7 +71,12 @@ function sharedPetLayers(size) {
   return loadSharedPet().items.slice(0, 20).map(it => {
     const x = safePetNum(it.x, 50, 0, 100), y = safePetNum(it.y, 50, 0, 100);
     const s = safePetNum(it.s, 1, .3, 3), r = safePetNum(it.r, 0, -360, 360);
-    return `<span class="buddyShared" style="left:${x}%;top:${y}%;font-size:${Math.round(size * .3 * s)}px;transform:translate(-50%,-50%) rotate(${r}deg)">${esc(it.e || "")}</span>`;
+    const base = safePetNum(it.base, .3, .2, 1.2);
+    const art = String(it.art || "");
+    /* 只接受英语项目内置的透明装扮图，拒绝存档里任意外链或 HTML。 */
+    const safeArt = /^https:\/\/nevergiveup0618\.github\.io\/English\/assets\/outfits\/[a-z0-9-]+\.svg$/.test(art);
+    const sizeStyle = safeArt ? `width:${Math.round(size * base * s)}px` : `font-size:${Math.round(size * .3 * s)}px`;
+    return `<span class="buddyShared" style="left:${x}%;top:${y}%;${sizeStyle};transform:translate(-50%,-50%) rotate(${r}deg)">${safeArt ? `<img src="${art}" alt="">` : esc(it.e || "")}</span>`;
   }).join("");
 }
 let W = loadWallet();
@@ -134,22 +139,35 @@ function coinFly(n) {
 
 /* ---------------- 导航 ---------------- */
 let navStack = [];
+let navTabs = [];
+let activeTab = "home";
+const ROOT_TABS = { home: "home", map: "map", idea: "idea", tools: "tools", gems: "gems" };
+function setActiveTab(tab) {
+  if (!tab) return;
+  activeTab = tab;
+  $$(".tab").forEach(x => x.classList.toggle("on", x.dataset.tab === tab));
+}
 function show(id, title) {
+  if (ROOT_TABS[id]) setActiveTab(ROOT_TABS[id]);
   $$(".screen").forEach(s => s.classList.remove("on"));
   $("#scr-" + id).classList.add("on");
   $("#barTitle").textContent = title;
   $("#backBtn").style.visibility = navStack.length > 1 ? "visible" : "hidden";
   $("#screens").scrollTop = 0;
+  if (navStack.length === 1) navTabs = [activeTab];
 }
-function go(fn) { navStack.push(fn); fn(); }
-function goTab(fn) { navStack = [fn]; fn(); }
-function goBack() { if (navStack.length > 1) navStack.pop(); navStack[navStack.length - 1](); }
+function go(fn, tab) { navStack.push(fn); navTabs.push(tab || activeTab); if (tab) setActiveTab(tab); fn(); }
+function goTab(fn, tab) { navStack = [fn]; navTabs = [tab || activeTab]; if (tab) setActiveTab(tab); fn(); }
+function goBack() {
+  if (navStack.length <= 1) return;
+  navStack.pop(); navTabs.pop();
+  setActiveTab(navTabs[navTabs.length - 1] || "home");
+  navStack[navStack.length - 1]();
+}
 $("#backBtn").onclick = goBack;
 $$(".tab").forEach(t => {
   t.onclick = () => {
-    $$(".tab").forEach(x => x.classList.remove("on"));
-    t.classList.add("on");
-    ({ home: () => goTab(renderHome), map: () => goTab(renderMap), idea: () => goTab(renderIdea), tools: () => goTab(renderTools), gems: () => goTab(renderGems) })[t.dataset.tab]();
+    ({ home: () => goTab(renderHome, "home"), map: () => goTab(renderMap, "map"), idea: () => goTab(renderIdea, "idea"), tools: () => goTab(renderTools, "tools"), gems: () => goTab(renderGems, "gems") })[t.dataset.tab]();
   };
 });
 
@@ -242,7 +260,7 @@ function renderHome() {
         "你昨天那句我还记着呢，真不赖。",
         "别怕写不好——我们是来寻宝的，不是来考试的。"
       ]))}</div>
-      <button class="wardrobeBridge" id="goEnglishWardrobe">🪙 ${W.coins} 金币 · 去英语给白白挑裙子 →</button>
+      <button class="wardrobeBridge" id="goEnglishWardrobe">🪙 ${W.coins} 金币 · 去英语给白白挑披风 →</button>
     </div>
 
     <div class="sectionTitle">📋 今日探险（约 10 分钟）</div>
@@ -276,10 +294,10 @@ function renderHome() {
     ev.stopPropagation();
     location.href = "https://nevergiveup0618.github.io/English/";
   };
-  $("#goNext").onclick = () => go(() => renderStop(nextStop));
-  $("#goIdea").onclick = () => goTab(renderIdea) || $$(".tab").forEach(t => t.classList.toggle("on", t.dataset.tab === "idea"));
-  $("#goGems").onclick = () => go(renderGems);
-  $("#goTools").onclick = () => go(renderTools);
+  $("#goNext").onclick = () => go(() => renderStop(nextStop), "map");
+  $("#goIdea").onclick = () => go(renderIdea, "idea");
+  $("#goGems").onclick = () => go(renderGems, "gems");
+  $("#goTools").onclick = () => go(renderTools, "tools");
   $("#goEssay").onclick = () => go(renderEssayList);
   $("#goPassport").onclick = () => go(renderPassport);
   $("#parentLink").onclick = () => go(renderParent);
@@ -1695,7 +1713,7 @@ function renderBackup() {
 
 /* ================= 启动 ================= */
 updateCoinBox();
-navStack = [renderHome];
+navStack = [renderHome]; navTabs = ["home"];
 renderHome();
 save();
 /* 从英语衣橱回来时，立即换成刚保存的白白造型；金币也一起重读。 */

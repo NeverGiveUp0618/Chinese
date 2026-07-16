@@ -1,4 +1,4 @@
-const CACHE = "treasure-writing-v21";
+const CACHE = "treasure-writing-v22";
 const FILES = ["./", "./index.html", "./data.js", "./check.js", "./app.js", "./manifest.json", "./assets/baibai-base.png"];
 self.addEventListener("install", e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES)).then(() => self.skipWaiting())); });
 self.addEventListener("activate", e => { e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== CACHE).map(k => caches.delete(k)))).then(() => self.clients.claim())); });

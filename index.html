@@ -61,6 +61,7 @@ body {
 .buddyAvatar { position:relative; display:inline-block; vertical-align:middle; flex:none; }
 .buddyBodyImg { position:absolute; z-index:2; inset:0; width:100%; height:100%; object-fit:contain; }
 .buddyShared { position:absolute; z-index:3; line-height:1; pointer-events:none; filter:drop-shadow(0 1px 2px rgba(80,55,30,.18)); }
+.buddyShared img { width:100%; height:auto; display:block; }
 .buddyGear { position:absolute; z-index:3; line-height:1; filter:drop-shadow(0 2px 2px rgba(80,55,30,.2)); }
 .buddyGear.head { font-size:38px; left:34%; top:0; transform:rotate(-5deg); }
 .buddyGear.hand { font-size:30px; right:1%; bottom:12%; transform:rotate(8deg); }
@@ -356,9 +357,9 @@ body {
 </head>
 <body>
 <div id="app">
-  <a class="hubLink" id="hubLink" href="https://nevergiveup0618.github.io/learning/">← 返回学习导航</a>
+  <a class="hubLink" id="hubLink" href="https://nevergiveup0618.github.io/learning/" aria-label="离开作文寻宝，返回学习导航">← 返回学习导航</a>
   <header id="topbar">
-    <button id="backBtn">←</button>
+    <button id="backBtn" type="button" aria-label="返回作文寻宝上一页">←</button>
     <div id="barTitle">寻宝作文记</div>
     <div id="coinBox">🪙 <span id="coinNum">0</span></div>
   </header>
