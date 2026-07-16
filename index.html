@@ -271,6 +271,9 @@ body {
 .aiRef .aiSafe { margin-top:8px; padding:7px 9px; border-radius:9px; background:#fff; color:#9a87a7; font-size:10px; line-height:1.55; }
 .aiTokenInput { width:100%; box-sizing:border-box; margin-top:9px; border:1.5px solid #cfbddc; border-radius:10px; background:#fff; padding:10px 11px; color:#574661; font:inherit; font-size:13px; outline:none; }
 .aiTokenInput:focus { border-color:#8c6ca4; box-shadow:0 0 0 3px rgba(140,108,164,.1); }
+.aiRemember { display:flex; align-items:flex-start; gap:6px; margin-top:8px; color:#766b80; font-size:11px; line-height:1.5; }
+.aiRemember input { margin-top:2px; accent-color:#80629a; }
+.aiChildState { margin-top:8px; border-radius:9px; padding:7px 9px; background:#eef7e9; color:#58764b; font-size:10.5px; line-height:1.6; }
 .aiResult { display:grid; gap:8px; margin-top:10px; }
 .aiPart { border-radius:11px; background:rgba(255,255,255,.8); padding:9px 10px; color:#65566e; font-size:12px; line-height:1.65; }
 .aiPart.good { border-left:3px solid #d6a642; }
@@ -284,6 +287,10 @@ body {
 .aiActions { display:flex; flex-wrap:wrap; align-items:center; gap:6px; margin-top:10px; }
 .aiChangeToken { border:0; background:transparent; padding:5px; color:#9a83a6; font:inherit; font-size:10px; text-decoration:underline; cursor:pointer; }
 .childAiCoach { border:2px solid #b7d99d; background:linear-gradient(145deg,#f8fff2,#eef9e7); padding:13px; }
+#childAiLive { margin-top:10px; }
+#childAiLive .childAiCoach { margin-bottom:0; box-shadow:none; }
+.childAiLoading, .childAiOffline { border-radius:11px; background:#f4f8ee; padding:9px 10px; color:#708365; font-size:11px; line-height:1.6; }
+.childAiRetry { margin-left:6px; border:0; background:transparent; color:#5c7d4c; font:inherit; font-weight:800; text-decoration:underline; }
 .childAiHead { display:flex; align-items:center; gap:9px; color:#52733f; }
 .childAiHead > span { font-size:30px; }
 .childAiHead b { display:block; font-size:15px; }

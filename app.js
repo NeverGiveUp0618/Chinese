@@ -21,6 +21,7 @@ const WALLET_KEY = "sharedWallet_v1";
 /* DeepSeek 只通过腾讯云函数安全中转；家长访问口令仅存 sessionStorage，绝不进仓库或备份 */
 const AI_REVIEW_URL = "https://1454399073-kdjvn8zqkf.ap-guangzhou.tencentscf.com/";
 const AI_TOKEN_KEY = "twAiReviewToken_v1";
+const AI_DEVICE_TOKEN_KEY = "twAiDeviceToken_v1";
 
 function defState() {
   return {
@@ -32,7 +33,7 @@ function defState() {
     remixes: [],    // 宝物变身记录：{from,tool,d,hit}，只记是否用了技巧，不评好坏
     gear: { head: "", hand: "", back: "" }, // 小獾探险装备：只解锁，不磨损、不降级
     essays: {},     // essayId -> {paras:[], done:bool, score:0}
-    aiReviews: {},  // 家长端 AI 批阅参考（只存结果，不存访问口令）
+    aiReviews: {},  // AI 结果缓存（家长完整参考 + 孩子即时灵感；不含访问口令）
     checkins: {},
     testMode: false // 家长测试模式：全部解锁，给孩子用前记得关掉
   };
@@ -537,6 +538,7 @@ function renderJudge(r, text, tool, q, stop, qi) {
         <div class="dt">📖 看看别人怎么写的（不用一样，参考就好）</div>
         ${esc(q.demo)}
       </div>
+      <div id="childAiLive"></div>
       <div style="height:12px"></div>
       ${r.hit ? `<button class="btn" id="jSave">💎 收进宝库 + 完成任务</button>
                  <div style="height:8px"></div>
@@ -547,6 +549,11 @@ function renderJudge(r, text, tool, q, stop, qi) {
     </div>`;
 
   if (r.hit) { sndGood(); if (r.stars === 3) confetti(12); } else sndSoft();
+
+  requestChildAiIdeas({
+    kind: "quest", id: `${stop.id}-${qi}`, title: `${stop.name}寻宝练笔`,
+    prompt: String(q.ask || "").replace(/<[^>]+>/g, ""), text, target: tool.short
+  }, $("#childAiLive"));
 
   const finish = () => {
     const st = stopS(stop.id);
@@ -795,7 +802,6 @@ function renderEssayWrite(e) {
   if (!S.essays[e.id]) S.essays[e.id] = { paras: e.outline.map(() => ""), done: false, score: 0, reviewed: false, comment: "" };
   const es = S.essays[e.id];
   const gemPool = S.gems.slice(0, 6);
-  const fullText = (es.paras || []).join("\n");
   $("#scr-essayWrite").innerHTML = `
     <div class="card" style="text-align:center;padding:12px">
       <div style="font-size:34px">${e.icon}</div>
@@ -809,7 +815,6 @@ function renderEssayWrite(e) {
       <div class="ct" style="color:#a08a6a">⏳ 已交稿，等爸爸妈妈看</div>
       <div class="cb" style="font-size:13px">拿给他们看一眼吧——他们读完给你写评语，你还能再拿 2 张转盘券。</div>
     </div>` : ""}
-    ${renderChildAiCoach({ kind: "essay", id: e.id, title: e.title, text: fullText })}
     ${gemPool.length ? `<div class="card" style="padding:12px">
       <div style="font-size:13px;font-weight:700;color:#8a6a2a;margin-bottom:6px">💎 从你的宝库里挑素材用（点一下复制）</div>
       ${gemPool.map((g, i) => `<div class="gem" style="margin-bottom:6px;padding:8px 10px;cursor:pointer" data-g="${i}">
@@ -844,7 +849,6 @@ function renderEssayWrite(e) {
       sndCoin(); toast("💎 宝物已放进段落里", 1400);
     };
   });
-  bindChildAiCoach(() => renderEssayWrite(e));
   $("#eSave").onclick = () => { save(); sndCoin(); toast("💾 草稿已保存", 1500); };
   $("#eDone").onclick = () => {
     const written = es.paras.filter(x => x && x.trim()).length;
@@ -1098,7 +1102,10 @@ function aiHash(s) {
   for (const ch of String(s)) { h ^= ch.codePointAt(0); h = Math.imul(h, 16777619); }
   return (h >>> 0).toString(36);
 }
-function aiToken() { try { return sessionStorage.getItem(AI_TOKEN_KEY) || ""; } catch (e) { return ""; } }
+function deviceAiToken() { try { return localStorage.getItem(AI_DEVICE_TOKEN_KEY) || ""; } catch (e) { return ""; } }
+function aiToken() {
+  try { return sessionStorage.getItem(AI_TOKEN_KEY) || deviceAiToken(); } catch (e) { return deviceAiToken(); }
+}
 function aiList(v) {
   if (!v) return [];
   if (Array.isArray(v)) return v.map(x => typeof x === "string" ? x : (x.text || x.content || JSON.stringify(x))).filter(Boolean);
@@ -1178,6 +1185,51 @@ function renderChildAiCoach(ctx) {
     <div class="childAiNote">这些是 AI 灵感，不是你的原创。喜欢哪一种想法，可以收藏，再换成自己的说法。</div>
   </div>`;
 }
+function paintChildAiCoach(ctx, host) {
+  if (!host || !host.isConnected) return;
+  host.innerHTML = renderChildAiCoach(ctx);
+  bindChildAiCoach(() => paintChildAiCoach(ctx, host));
+}
+function requestChildAiIdeas(ctx, host) {
+  if (!host) return;
+  const key = aiReviewKey(ctx), old = S.aiReviews[key] && S.aiReviews[key].data;
+  if (old) {
+    const ready = normalizeAiReview(old);
+    if (ready.suggestion || ready.examples.length) { paintChildAiCoach(ctx, host); return; }
+  }
+  const token = deviceAiToken();
+  if (!token) return;
+  host.innerHTML = `<div class="childAiLoading">🦡 小獾正在找三种新灵感…</div>`;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 85000);
+  const payload = {
+    reviewToken: token, type: ctx.kind, grade: "小学四年级", title: ctx.title,
+    prompt: ctx.prompt, text: ctx.text, content: ctx.text, essay: ctx.text,
+    targetTechnique: ctx.target || "",
+    requirements: "只给孩子一个不评价好坏、可以马上尝试的建议，并针对原句给三条不同参考写法。不打分，不挑错，不重写全文。"
+  };
+  const fail = (message, auth) => {
+    clearTimeout(timer);
+    if (auth) { try { localStorage.removeItem(AI_DEVICE_TOKEN_KEY); } catch (e) {} }
+    if (!host.isConnected) return;
+    host.innerHTML = `<div class="childAiOffline">${auth ? "🦡 AI 灵感需要爸爸妈妈在家长设置里重新开启。" : "🦡 AI 灵感暂时没赶上，前面小獾的反馈照样有效。<button class=\"childAiRetry\">再找一次</button>"}</div>`;
+    const retry = host.querySelector(".childAiRetry");
+    if (retry) retry.onclick = () => requestChildAiIdeas(ctx, host);
+  };
+  fetch(AI_REVIEW_URL, {
+    method: "POST", headers: { "Content-Type": "text/plain;charset=UTF-8" },
+    body: JSON.stringify(payload), credentials: "omit", signal: controller.signal
+  }).then(async response => {
+    let body;
+    try { body = await response.json(); }
+    catch (e) { fail("服务器返回内容无法读取", false); return; }
+    if (!response.ok || body.ok === false) { fail(body.error || "服务暂时不可用", response.status === 401 || responseIsAuthError(body.error)); return; }
+    clearTimeout(timer);
+    const data = normalizeAiReview(body);
+    if (!data.suggestion && !data.examples.length) { fail("AI 返回格式异常", false); return; }
+    S.aiReviews[key] = { at: todayStr(), data }; save(); paintChildAiCoach(ctx, host);
+  }).catch(error => fail(error && error.name === "AbortError" ? "请求超时" : "无法连接", false));
+}
 function bindChildAiCoach(refresh) {
   $$(".childAiCoach .childAiSave").forEach(button => button.onclick = () => {
     const box = button.closest(".childAiCoach"), key = box.dataset.childAiKey;
@@ -1201,10 +1253,14 @@ function renderAiPanel(ctx) {
   aiContexts[key] = ctx;
   const raw = S.aiReviews[key] && S.aiReviews[key].data, saved = raw ? normalizeAiReview(raw) : null;
   const tokenReady = !!aiToken();
+  const deviceReady = !!deviceAiToken();
+  const tokenForm = `<div class="aiStatus">${saved ? "访问口令已过期，请重新输入。" : "第一次使用，请输入你设置的<b>家长访问口令</b>。"}它不会进入学习存档或备份。</div><input class="aiTokenInput" type="password" autocomplete="off" placeholder="48 位家长访问口令"><label class="aiRemember"><input class="aiRememberDevice" type="checkbox" checked> 在这台家庭设备开启“小獾 AI 即时灵感”</label><button class="btn small aiSaveToken" data-ai-key="${key}" style="margin-top:9px">确认使用</button>`;
+  const savedActions = `<div class="aiActions"><button class="btn small ghost aiGenerate" data-ai-key="${key}">重新生成</button>${ctx.allowComment ? `<button class="btn small ghost aiUseComment" data-ai-key="${key}">放入家长评语</button>` : ""}<button class="aiChangeToken" data-ai-key="${key}">更换访问口令</button></div>`;
   return `<div class="card aiRef" data-ai-card="${key}">
     <div class="aiTitle">✨ AI 批阅参考 <span>仅家长可见</span></div>
-    ${saved ? `${aiResultHtml(saved)}<div class="aiActions"><button class="btn small ghost aiGenerate" data-ai-key="${key}">重新生成</button>${ctx.allowComment ? `<button class="btn small ghost aiUseComment" data-ai-key="${key}">放入家长评语</button>` : ""}<button class="aiChangeToken" data-ai-key="${key}">更换访问口令</button></div>` : tokenReady ? `<div class="aiStatus">准备好后手动生成。只会发送本页的题目和原文，不发送姓名、学校、钱包或其他学习记录。</div><button class="btn small aiGenerate" data-ai-key="${key}" style="margin-top:9px">生成 AI 批阅参考</button><button class="aiChangeToken" data-ai-key="${key}">更换访问口令</button>` : `<div class="aiStatus">第一次使用，请输入你设置的<b>家长访问口令</b>。它只保存在当前浏览器会话，关闭浏览器后自动清除。</div><input class="aiTokenInput" type="password" autocomplete="off" placeholder="48 位家长访问口令"><button class="btn small aiSaveToken" data-ai-key="${key}" style="margin-top:9px">本次会话使用</button>`}
-    <div class="aiSafe">🔒 DeepSeek API Key 始终保存在腾讯云函数；AI 不打星、不自动提交，也不修改孩子原文。孩子端只会看到一个建议和三条参考写法，其余内容仍仅家长可见。</div>
+    ${saved ? `${aiResultHtml(saved)}${tokenReady ? savedActions : tokenForm}` : tokenReady ? `<div class="aiStatus">准备好后手动生成。只会发送本页的题目和原文，不发送姓名、学校、钱包或其他学习记录。</div><button class="btn small aiGenerate" data-ai-key="${key}" style="margin-top:9px">生成 AI 批阅参考</button><button class="aiChangeToken" data-ai-key="${key}">更换访问口令</button>` : tokenForm}
+    ${deviceReady ? `<div class="aiChildState on">✅ 这台设备已开启：孩子点“让小獾看看”会直接收到 AI 建议和三条例句。</div>` : tokenReady ? `<button class="btn small ghost aiEnableChild" style="margin-top:8px">在这台设备开启“小獾 AI 即时灵感”</button>` : ""}
+    <div class="aiSafe">🔒 DeepSeek API Key 始终保存在腾讯云函数。设备授权口令单独保存在这台设备，不进入学习备份；孩子看不到口令，也不会看到评分、疑似问题或家长评语草稿。</div>
   </div>`;
 }
 function requestAiReview(key, button, refresh) {
@@ -1232,7 +1288,7 @@ function requestAiReview(key, button, refresh) {
   };
   const fail = (msg, code = 0) => {
     if (finished) return; finished = true;
-    if (code === 401 || responseIsAuthError(msg)) { try { sessionStorage.removeItem(AI_TOKEN_KEY); } catch (e) {} }
+    if (code === 401 || responseIsAuthError(msg)) { try { sessionStorage.removeItem(AI_TOKEN_KEY); localStorage.removeItem(AI_DEVICE_TOKEN_KEY); } catch (e) {} }
     cleanup(); toast("AI 批阅失败：" + msg, 3200);
     if (code === 401 || responseIsAuthError(msg)) refreshView();
     else { button.disabled = false; button.textContent = "重新尝试"; if (status) status.textContent = msg; }
@@ -1266,16 +1322,27 @@ function requestAiReview(key, button, refresh) {
 function responseIsAuthError(msg) { return String(msg).includes("口令") || String(msg).includes("401"); }
 function bindAiPanels(refresh) {
   $$(".aiSaveToken").forEach(b => b.onclick = () => {
-    const input = b.closest(".aiRef").querySelector(".aiTokenInput"), v = input.value.trim();
+    const card = b.closest(".aiRef"), input = card.querySelector(".aiTokenInput"), v = input.value.trim();
     if (!v) { toast("先输入家长访问口令"); return; }
     const pendingComment = $("#cmtArea") ? $("#cmtArea").value : null;
     try { sessionStorage.setItem(AI_TOKEN_KEY, v); } catch (e) {}
+    if (card.querySelector(".aiRememberDevice") && card.querySelector(".aiRememberDevice").checked) {
+      try { localStorage.setItem(AI_DEVICE_TOKEN_KEY, v); } catch (e) {}
+    }
     refresh();
     if (pendingComment !== null && $("#cmtArea")) $("#cmtArea").value = pendingComment;
   });
+  $$(".aiEnableChild").forEach(b => b.onclick = () => {
+    const v = aiToken();
+    if (!v) { toast("请先输入家长访问口令"); return; }
+    try { localStorage.setItem(AI_DEVICE_TOKEN_KEY, v); } catch (e) {}
+    const pendingComment = $("#cmtArea") ? $("#cmtArea").value : null;
+    refresh(); if (pendingComment !== null && $("#cmtArea")) $("#cmtArea").value = pendingComment;
+    toast("✅ 这台设备已开启小獾 AI 即时灵感", 2200);
+  });
   $$(".aiChangeToken").forEach(b => b.onclick = () => {
     const pendingComment = $("#cmtArea") ? $("#cmtArea").value : null;
-    try { sessionStorage.removeItem(AI_TOKEN_KEY); } catch (e) {}
+    try { sessionStorage.removeItem(AI_TOKEN_KEY); localStorage.removeItem(AI_DEVICE_TOKEN_KEY); } catch (e) {}
     refresh();
     if (pendingComment !== null && $("#cmtArea")) $("#cmtArea").value = pendingComment;
   });

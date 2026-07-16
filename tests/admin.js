@@ -67,7 +67,8 @@ const S = () => w.eval("S");
   $("#cmtArea").value = "这是一条还没提交的家长评语";
   $("#scr-reviewOne .aiTokenInput").value = "review-secret";
   $("#scr-reviewOne .aiSaveToken").click();
-  ok(w.sessionStorage.getItem("twAiReviewToken_v1") === "review-secret", "★ AI 访问口令只保存在当前会话");
+  ok(w.sessionStorage.getItem("twAiReviewToken_v1") === "review-secret", "★ 家长后台当前会话可继续使用 AI 访问口令");
+  ok(w.localStorage.getItem("twAiDeviceToken_v1") === "review-secret", "★ 家长可一次授权这台家庭设备，让孩子之后直接获得即时 AI 灵感");
   ok($("#cmtArea").value.includes("还没提交"), "★ 设置口令不会弄丢尚未提交的家长评语");
   let aiRequest;
   w.fetch = async function (url, options) {
@@ -96,7 +97,11 @@ const S = () => w.eval("S");
   ok($("#cmtArea").value.includes("还没提交"), "★ AI 返回后仍保留家长未提交的评语");
   $("#scr-reviewOne .aiUseComment").click();
   ok($("#cmtArea").value.includes("我喜欢绿色的大馒头") && w.document.activeElement !== $("#cmtArea"), "★ 云函数的家长评语草稿可放入输入框，但不自动弹出键盘");
-  ok(!w.localStorage.getItem("treasureWriting_v1").includes("review-secret"), "★ 访问口令不写入长期存储或备份状态");
+  ok(!w.localStorage.getItem("treasureWriting_v1").includes("review-secret"), "★ 设备授权口令不混入学习存档或备份状态");
+  w.sessionStorage.removeItem("twAiReviewToken_v1"); w.localStorage.removeItem("twAiDeviceToken_v1");
+  w.eval("renderReviewOne('e1')");
+  ok(!!$("#scr-reviewOne .aiTokenInput") && $("#scr-reviewOne").textContent.includes("让山的样子很具体"), "★ 已有旧 AI 结果但授权过期时，仍可重新输入口令，不会卡在旧结果页");
+  $("#scr-reviewOne .aiTokenInput").value = "review-secret"; $("#scr-reviewOne .aiSaveToken").click();
   $("#cmtArea").value = "";
 
   // 不打分不能提交
@@ -122,17 +127,7 @@ const S = () => w.eval("S");
   ok($("#scr-essayWrite").innerHTML.includes("爸爸妈妈的评语"), "★ 孩子打开作文能看到评语");
   ok($("#scr-essayWrite").innerHTML.includes("大馒头"), "★ 评语原文显示给她");
   ok($("#scr-essayWrite").innerHTML.includes("⭐⭐⭐⭐"), "★ 星级也显示");
-  ok(!!$("#scr-essayWrite .childAiCoach") && $("#scr-essayWrite .childAiCoach").textContent.includes("下一次只补一句米粉的颜色"), "★ 孩子端能立即看到不评价好坏的一个优化建议");
-  ok($$("#scr-essayWrite .childAiExample").length === 3 && $$("#scr-essayWrite .childAiSave").length === 3, "★ 孩子端展示三条例句，每条都可收藏");
-  ok(!$("#scr-essayWrite .childAiCoach").textContent.includes("疑似") && !$("#scr-essayWrite .childAiCoach").textContent.includes("家长评语草稿"), "★ 孩子端不展示疑似问题或家长专属内容");
-  const gemsBeforeAi = S().gems.length, dailyBeforeAi = S().daily.gems;
-  const walletBeforeAi = w.localStorage.getItem("sharedWallet_v1");
-  $("#scr-essayWrite .childAiSave").click();
-  ok(S().gems.length === gemsBeforeAi + 1 && S().gems[0].kind === "ai-example", "★ AI 例句可以收进宝库并标记为参考而非原创");
-  ok(S().daily.gems === dailyBeforeAi && w.localStorage.getItem("sharedWallet_v1") === walletBeforeAi, "★ 收藏 AI 例句不计原创任务、不发奖励");
-  w.eval("renderGems()");
-  ok($("#scr-gems").textContent.includes("AI 参考·非原创"), "★ 宝库醒目标明 AI 参考，不冒充孩子原创");
-  w.eval("S.gems=S.gems.filter(g=>g.kind!=='ai-example');save();renderEssayWrite(ESSAYS[0]);");
+  ok(!$("#scr-essayWrite .childAiCoach"), "★ AI 即时建议不再放在完整作文页，触发位置固定为「让小獾看看」");
   // 未批阅时显示"等家长看"
   w.eval("S.essays.e1.reviewed=false;save();navStack=[()=>renderEssayWrite(ESSAYS[0])];renderEssayWrite(ESSAYS[0]);");
   ok($("#scr-essayWrite").innerHTML.includes("等爸爸妈妈看"), "★ 未批阅时提示「拿给他们看」");

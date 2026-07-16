@@ -92,6 +92,20 @@ const ok = (c, m) => { c ? pass++ : fail++; console.log(`  ${c ? "✓" : "✗ FA
   ok(w.document.activeElement !== $("#writeArea"), "★ 点「再加一句」也不抢光标，等孩子自己点输入位置");
 
   // ② 改成用了比喻的
+  w.localStorage.setItem("twAiDeviceToken_v1", "review-secret");
+  let childAiRequest;
+  w.fetch = async (url, options) => {
+    childAiRequest = { url, body:JSON.parse(options.body) };
+    return { ok:true, status:200, json:async () => ({ok:true,review:{
+      priorityTip:"下一次只试一个小变化：再补一种山的颜色。",
+      rewrite:{original:"桂林的山像绿色的大馒头。",examples:[
+        {label:"加颜色",text:"桂林的山像披着浅绿外衣的大馒头。"},
+        {label:"加远近",text:"近处的山像大馒头，远处的山像小笋尖。"},
+        {label:"加动作",text:"一座座青山挤在一起，像抢着探头的大馒头。"}
+      ]},
+      checks:[{quote:"很美",issue:"疑似空泛"}], parentCommentDraft:"只给家长看的内容"
+    }}) };
+  };
   $("#writeArea").value = "桂林的山像一个个绿色的大馒头，一个挨着一个排到天边。";
   $("#wGo").click();
   await sleep(50);
@@ -99,6 +113,14 @@ const ok = (c, m) => { c ? pass++ : fail++; console.log(`  ${c ? "✓" : "✗ FA
   ok(jb.includes("⭐⭐⭐"), "★ 用上比喻且够长 → 3 星");
   ok(jb.includes("比喻词"), "告诉她检测到了什么");
   ok(!!$("#jSave"), "可以收进宝库");
+  ok(childAiRequest.body.reviewToken === "review-secret" && childAiRequest.body.type === "quest", "★ 点「让小獾看看」会用家长授权直接请求 AI 即时灵感");
+  ok($$("#childAiLive .childAiExample").length === 3 && $("#childAiLive").textContent.includes("再补一种山的颜色"), "★ 同一张小獾反馈卡立即展示一个建议和三条例句");
+  ok(!$("#childAiLive").textContent.includes("疑似空泛") && !$("#childAiLive").textContent.includes("只给家长"), "★ 孩子即时反馈不会泄露疑似问题或家长草稿");
+  const aiDailyBefore = S().daily.gems, aiWalletBefore = w.localStorage.getItem("sharedWallet_v1");
+  $("#childAiLive .childAiSave").click();
+  ok(S().gems[0].kind === "ai-example" && S().gems[0].txt.includes("浅绿外衣"), "★ 即时例句可收进宝库并标记为 AI 参考");
+  ok(S().daily.gems === aiDailyBefore && w.localStorage.getItem("sharedWallet_v1") === aiWalletBefore, "★ 收藏 AI 例句不计原创任务、不发奖励");
+  w.eval("S.gems=S.gems.filter(g=>g.kind!=='ai-example');save()");
 
   const coinBefore = +$("#coinNum").textContent;
   $("#jSave").click();
