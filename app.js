@@ -2,7 +2,7 @@
  * 寻宝作文记 · 主逻辑
  *
  * 最重要的一条：她拒绝单向灌输（录播课「不是直播就不看」）。
- * 所以每一次她敲下的字，小獾都必须立刻回应——这是整个产品的命门。
+ * 所以每一次她敲下的字，白白都必须立刻回应——这是整个产品的命门。
  * ============================================================ */
 
 const $ = s => document.querySelector(s);
@@ -18,6 +18,7 @@ function dateAdd(n) { const d = new Date(Date.now() + n * 864e5); return d.getFu
 const LS_KEY = "treasureWriting_v1";
 /* 和英语App共享的钱包：同一个域，localStorage 互通 —— 两个学科，一只宠物 */
 const WALLET_KEY = "sharedWallet_v1";
+const SHARED_PET_KEY = "sharedPet_v1"; // 英语衣橱保存的白白最新造型
 /* DeepSeek 只通过腾讯云函数安全中转；家长访问口令仅存 sessionStorage，绝不进仓库或备份 */
 const AI_REVIEW_URL = "https://1454399073-kdjvn8zqkf.ap-guangzhou.tencentscf.com/";
 const AI_TOKEN_KEY = "twAiReviewToken_v1";
@@ -31,7 +32,7 @@ function defState() {
     tools: {},      // toolId -> {learned:bool, used:n, best:0}
     gems: [],       // 宝库：{txt, tool, from, d}
     remixes: [],    // 宝物变身记录：{from,tool,d,hit}，只记是否用了技巧，不评好坏
-    gear: { head: "", hand: "", back: "" }, // 小獾探险装备：只解锁，不磨损、不降级
+    gear: { head: "", hand: "", back: "" }, // 白白的语文探险装备：只解锁，不磨损、不降级
     essays: {},     // essayId -> {paras:[], done:bool, score:0}
     aiReviews: {},  // AI 结果缓存（家长完整参考 + 孩子即时灵感；不含访问口令）
     checkins: {},
@@ -56,6 +57,23 @@ function loadWallet() {
   return { coins: 0, tickets: 0 };
 }
 function saveWallet(w) { try { localStorage.setItem(WALLET_KEY, JSON.stringify(w)); } catch (e) {} }
+function loadSharedPet() {
+  try {
+    const p = JSON.parse(localStorage.getItem(SHARED_PET_KEY) || "null");
+    if (p && Array.isArray(p.items)) return p;
+  } catch (e) {}
+  return { v: 1, name: "白白", items: [] };
+}
+function safePetNum(v, fallback, min, max) {
+  v = Number(v); return Number.isFinite(v) ? Math.max(min, Math.min(max, v)) : fallback;
+}
+function sharedPetLayers(size) {
+  return loadSharedPet().items.slice(0, 20).map(it => {
+    const x = safePetNum(it.x, 50, 0, 100), y = safePetNum(it.y, 50, 0, 100);
+    const s = safePetNum(it.s, 1, .3, 3), r = safePetNum(it.r, 0, -360, 360);
+    return `<span class="buddyShared" style="left:${x}%;top:${y}%;font-size:${Math.round(size * .3 * s)}px;transform:translate(-50%,-50%) rotate(${r}deg)">${esc(it.e || "")}</span>`;
+  }).join("");
+}
 let W = loadWallet();
 function updateCoinBox() { $("#coinNum").textContent = W.coins; }
 function addCoins(n) {
@@ -168,10 +186,13 @@ const GEARS = [
   { id: "tent", slot: "back", icon: "⛺", name: "星空帐篷", medals: 1, say: "集齐 1 条路线勋章" }
 ];
 function gearOpen(g) { return g.medals ? medalCount() >= g.medals : stampCount() >= g.need; }
-function buddyAvatar(id) {
+function buddyAvatar(id, size, withGear) {
+  const sz = size || 116;
   const gear = S.gear || {}, head = GEARS.find(g => g.id === gear.head), hand = GEARS.find(g => g.id === gear.hand), back = GEARS.find(g => g.id === gear.back);
-  return `<div class="buddyAvatar" id="${id || "buddyE"}">${back ? `<span class="buddyGear back">${back.icon}</span>` : ""}<span class="buddyBody">${BUDDY.e}</span>${head ? `<span class="buddyGear head">${head.icon}</span>` : ""}${hand ? `<span class="buddyGear hand">${hand.icon}</span>` : ""}</div>`;
+  const showGear = withGear !== false;
+  return `<span class="buddyAvatar" ${id ? `id="${id}"` : ""} style="width:${sz}px;height:${sz}px">${showGear && back ? `<span class="buddyGear back">${back.icon}</span>` : ""}<img class="buddyBodyImg" src="assets/baibai-base.png" alt="白白">${sharedPetLayers(sz)}${showGear && head ? `<span class="buddyGear head">${head.icon}</span>` : ""}${showGear && hand ? `<span class="buddyGear hand">${hand.icon}</span>` : ""}</span>`;
 }
+function buddyMark(size) { return buddyAvatar("", size || 42, false); }
 
 /* ---------------- 每日任务 ---------------- */
 function taskDone() {
@@ -221,6 +242,7 @@ function renderHome() {
         "你昨天那句我还记着呢，真不赖。",
         "别怕写不好——我们是来寻宝的，不是来考试的。"
       ]))}</div>
+      <button class="wardrobeBridge" id="goEnglishWardrobe">🪙 ${W.coins} 金币 · 去英语给白白挑裙子 →</button>
     </div>
 
     <div class="sectionTitle">📋 今日探险（约 10 分钟）</div>
@@ -250,6 +272,10 @@ function renderHome() {
     $("#buddySay").textContent = pick(BUDDY.praise.concat(BUDDY.push));
     sndSoft();
   };
+  $("#goEnglishWardrobe").onclick = ev => {
+    ev.stopPropagation();
+    location.href = "https://nevergiveup0618.github.io/English/";
+  };
   $("#goNext").onclick = () => go(() => renderStop(nextStop));
   $("#goIdea").onclick = () => goTab(renderIdea) || $$(".tab").forEach(t => t.classList.toggle("on", t.dataset.tab === "idea"));
   $("#goGems").onclick = () => go(renderGems);
@@ -272,7 +298,7 @@ function renderPassport() {
   const totalDays = Object.keys(S.checkins || {}).length;
   $("#scr-passport").innerHTML = `
     <div class="card passportHero">
-      <div style="font-size:40px">📔</div><div><b>小獾探险护照</b><small>写过的每一天都算数，漏一天也不会扣掉任何成果</small></div>
+      <div style="font-size:40px">📔</div><div><b>白白探险护照</b><small>写过的每一天都算数，漏一天也不会扣掉任何成果</small></div>
     </div>
     <div class="passportStats"><div><b>${totalDays}</b><small>累计探险日</small></div><div><b>${stampCount()}/16</b><small>城市纪念章</small></div><div><b>${medalCount()}/3</b><small>路线勋章</small></div></div>
 
@@ -292,7 +318,7 @@ function renderPassport() {
     <div class="sectionTitle">🗺️ 路线勋章</div>
     <div class="medalRow">${ROUTES.map(r => `<div class="routeMedal ${hasRouteMedal(r) ? "earned" : ""}"><span>${hasRouteMedal(r) ? r.icon : "🔒"}</span><b>${r.name}</b><small>${r.stops.filter(hasStamp).length}/${r.stops.length} 城市章</small></div>`).join("")}</div>
 
-    <div class="sectionTitle">🎒 给小獾换探险装备</div>
+    <div class="sectionTitle">🎒 给白白换探险装备</div>
     <div class="card outfitPreview">${buddyAvatar("passportBuddy")}<div><b>${BUDDY.name}准备出发！</b><small>装备一旦解锁就永久保留，不会损坏，也不会因为没打卡而消失。</small></div></div>
     <div class="gearGrid">${GEARS.map(g => {
       const open = gearOpen(g), on = S.gear[g.slot] === g.id;
@@ -371,7 +397,7 @@ function renderStop(stop) {
       <div style="font-size:46px">${stop.icon}</div>
       <div style="font-size:20px;font-weight:800;color:#7a5a2a">${stop.name}</div>
       <div style="font-size:13px;color:#b0997a">${stop.region}</div>
-      <div style="font-size:13px;color:#6a5a42;margin-top:8px;background:#f7ecd5;border-radius:12px;padding:8px 10px;line-height:1.6">${BUDDY.e} ${esc(stop.intro)}</div>
+      <div style="font-size:13px;color:#6a5a42;margin-top:8px;background:#f7ecd5;border-radius:12px;padding:8px 10px;line-height:1.6;display:flex;align-items:center;gap:8px">${buddyMark(38)} <span>${esc(stop.intro)}</span></div>
     </div>
 
     <div class="card toolCard" id="readCards">
@@ -424,7 +450,7 @@ function renderCards(stop) {
     shell(`<div class="kcard clueCover" style="text-align:center;padding:24px 16px">
       <div style="font-size:52px">${c.e}</div>
       <div class="kt" style="font-size:18px;margin-top:8px">${esc(c.t)}</div>
-      <div style="font-size:12px;color:#b0997a;margin:6px 0 14px">小獾找到一张线索卡，翻开看看！</div>
+      <div style="font-size:12px;color:#b0997a;margin:6px 0 14px">白白找到一张线索卡，翻开看看！</div>
       <button class="btn" id="cardOpen">翻开线索 👀</button>
     </div>`);
     $("#cardOpen").onclick = reveal;
@@ -443,7 +469,7 @@ function renderCards(stop) {
     shell(`<div class="card" style="text-align:center;padding:14px">
       <div style="font-size:30px">🕵️</div>
       <div style="font-size:15px;font-weight:800;color:#7a5a2a">刚才最关键的线索是哪一句？</div>
-      <div style="font-size:12px;color:#b0997a;margin-top:3px">选错也没关系，小獾会马上告诉你</div>
+      <div style="font-size:12px;color:#b0997a;margin-top:3px">选错也没关系，白白会马上告诉你</div>
     </div><div class="clueOpts">${opts.map((o, i) => `<button class="clueOpt" data-i="${i}">${esc(o)}</button>`).join("")}</div>`);
     let locked = false;
     $$("#scr-cards .clueOpt").forEach(b => b.onclick = () => {
@@ -493,7 +519,7 @@ function renderWrite(stop, qi) {
     <div id="micTip">💡 不想打字？用手机键盘上的<b>麦克风按钮</b>说出来，它会自动变成文字。<b>说，比写容易多了。</b></div>
     <textarea id="writeArea" placeholder="在这里写下你的句子……"></textarea>
     <div id="writeMeta"><span id="wCount">0 字</span><span>写完点下面的按钮，${BUDDY.name}马上看</span></div>
-    <button class="btn" id="wGo">${BUDDY.e} 让${BUDDY.name}看看</button>
+    <button class="btn" id="wGo">${buddyMark(28)} 让${BUDDY.name}看看</button>
     <div style="height:12px"></div>
     <div id="judgeBox"></div>`;
 
@@ -512,11 +538,11 @@ function renderWrite(stop, qi) {
   show("write", tool.name);
 }
 
-/* 小獾的即时回应——这个项目的灵魂 */
+/* 白白的即时回应——这个项目的灵魂 */
 function renderJudge(r, text, tool, q, stop, qi) {
   const box = $("#judgeBox");
   if (r.tooShort) {
-    box.innerHTML = `<div class="jCard"><div class="jTop"><span class="jBuddy">${BUDDY.e}</span>
+    box.innerHTML = `<div class="jCard"><div class="jTop"><span class="jBuddy">${buddyMark(44)}</span>
       <div><div class="jTitle">${r.title}</div><div style="font-size:13px;color:#8a7a5a">${r.msg}</div></div></div></div>`;
     sndSoft();
     return;
@@ -525,7 +551,7 @@ function renderJudge(r, text, tool, q, stop, qi) {
   box.innerHTML = `
     <div class="jCard">
       <div class="jTop">
-        <span class="jBuddy">${BUDDY.e}</span>
+        <span class="jBuddy">${buddyMark(48)}</span>
         <div style="flex:1">
           <div class="jTitle">${r.title}</div>
           <div class="jStars">${"⭐".repeat(r.stars)}${"☆".repeat(3 - r.stars)}</div>
@@ -587,7 +613,7 @@ function renderDone(r, tool, stop, newStamp, newMedal) {
   $("#scr-done").innerHTML = `
     <div id="doneStars">${"⭐".repeat(r.stars) || "💪"}</div>
     <div id="doneTitle">${r.hit ? "宝物到手！" : "写出来就是胜利！"}</div>
-    <div id="doneMsg">${BUDDY.e} 「${esc(r.hit ? pick(BUDDY.praise) : pick(BUDDY.push))}」<br>
+    <div id="doneMsg">${buddyMark(46)} 「${esc(r.hit ? pick(BUDDY.praise) : pick(BUDDY.push))}」<br>
       这句已经存进你的<b>宝库</b>，写作文的时候可以直接拿来用。
       ${newStamp ? `<div class="newAward">${stop.icon} ${stop.name}城市纪念章到手！</div>` : ""}
       ${newMedal ? `<div class="newAward">🏅 ${routeOf(stop.id).name}勋章集齐！</div>` : ""}</div>
@@ -622,7 +648,7 @@ function renderIdea() {
       <div id="micTip">💡 懒得打字就用键盘的<b>麦克风</b>说出来，说完自动变文字。</div>
       <textarea id="writeArea" placeholder="想到什么就写什么……"></textarea>
       <div id="writeMeta"><span id="wCount">0 字</span><button class="btn ghost small" id="iSwap">🔄 换一个题目</button></div>
-      <button class="btn" id="iGo">${BUDDY.e} 写完啦</button>
+      <button class="btn" id="iGo">${buddyMark(28)} 写完啦</button>
       <div style="height:12px"></div><div id="judgeBox"></div>`;
     const ta = $("#scr-idea #writeArea");
     ta.oninput = () => { $("#scr-idea #wCount").textContent = [...ta.value.trim()].length + " 字"; };
@@ -631,13 +657,13 @@ function renderIdea() {
       const text = ta.value.trim();
       const r = judgeIdea(text);
       if (r.tooShort) {
-        $("#scr-idea #judgeBox").innerHTML = `<div class="jCard"><div class="jTop"><span class="jBuddy">${BUDDY.e}</span>
+        $("#scr-idea #judgeBox").innerHTML = `<div class="jCard"><div class="jTop"><span class="jBuddy">${buddyMark(44)}</span>
           <div><div class="jTitle">${r.title}</div><div style="font-size:13px;color:#8a7a5a">${r.msg}</div></div></div></div>`;
         sndSoft(); return;
       }
       $("#scr-idea #judgeBox").innerHTML = `
         <div class="jCard">
-          <div class="jTop"><span class="jBuddy">${BUDDY.e}</span>
+          <div class="jTop"><span class="jBuddy">${buddyMark(48)}</span>
             <div style="flex:1"><div class="jTitle">${r.title}</div><div class="jStars">${"⭐".repeat(r.stars)}${"☆".repeat(3 - r.stars)}</div></div>
           </div>
           <div class="jSay">「${esc(pick(BUDDY.praise))}」</div>
@@ -737,7 +763,7 @@ function renderRemix() {
     <div id="remixTools">${TOOLS.map(t => `<button class="remixTool" data-tool="${t.id}">${t.icon} ${t.short}</button>`).join("")}</div>
     <div class="sectionTitle">③ 保留原来的意思，换一种写法</div>
     <textarea id="remixArea" placeholder="先选上面的句子和法宝，再在这里写……"></textarea>
-    <button class="btn" id="remixGo">${BUDDY.e} 变身完成！</button>
+    <button class="btn" id="remixGo">${buddyMark(28)} 变身完成！</button>
     <div style="height:12px"></div><div id="remixFeedback"></div>`;
   $$("#remixSources .remixSource").forEach(b => b.onclick = () => {
     source = sources[+b.dataset.i];
@@ -754,7 +780,7 @@ function renderRemix() {
     const text = $("#remixArea").value.trim(), tool = TOOLS.find(t => t.id === target), r = judge(text, target);
     if (r.tooShort) { $("#remixFeedback").innerHTML = `<div class="jCard"><div class="jTitle">已经开始变啦！</div><div class="jSay">再多写几个字，让新法宝有地方施展～</div></div>`; sndSoft(); return; }
     $("#remixFeedback").innerHTML = `<div class="jCard">
-      <div class="jTop"><span class="jBuddy">${BUDDY.e}</span><div><div class="jTitle">${r.hit ? "变身成功！" : "换了一种写法！"}</div><div class="jStars">${r.hit ? "✨✨✨" : "✨"}</div></div></div>
+      <div class="jTop"><span class="jBuddy">${buddyMark(48)}</span><div><div class="jTitle">${r.hit ? "变身成功！" : "换了一种写法！"}</div><div class="jStars">${r.hit ? "✨✨✨" : "✨"}</div></div></div>
       <div class="jSay">${r.hit ? `检测到了「${tool.short}」！` : `这次还没检测到「${tool.short}」，但你已经真的动手改写了。`}</div>
       ${r.detail ? `<div class="jDetail">✅ ${esc(r.detail)}</div>` : ""}
       ${r.tips.map(t => `<div class="jTip ${t.type}">🎯 ${esc(t.text)}</div>`).join("")}
@@ -862,7 +888,7 @@ function renderEssayWrite(e) {
     $("#scr-done").innerHTML = `
       <div id="doneStars">🏆</div>
       <div id="doneTitle">一整篇作文，写完了！</div>
-      <div id="doneMsg">${BUDDY.e}「${esc(pick(BUDDY.praise))}」<br>
+      <div id="doneMsg">${buddyMark(46)}「${esc(pick(BUDDY.praise))}」<br>
         一共 <b>${len}</b> 个字，${e.outline.length} 段。<br><br>
         <b>把手机拿给爸爸妈妈看</b>，请他们读一遍——<br>然后你会拿到 <b>2 张转盘券</b> 🎟️</div>
       <div id="doneCoins">+30 🪙　+2 🎟️</div>
@@ -1174,7 +1200,7 @@ function renderChildAiCoach(ctx) {
   const key = aiReviewKey(ctx), raw = S.aiReviews[key] && S.aiReviews[key].data, saved = raw ? normalizeAiReview(raw) : null;
   if (!saved || (!saved.suggestion && !saved.examples.length)) return "";
   return `<div class="card childAiCoach" data-child-ai-key="${key}">
-    <div class="childAiHead"><span>🦡✨</span><div><b>小獾带回了 AI 灵感</b><small>没有分数，也不是标准答案</small></div></div>
+    <div class="childAiHead"><span>${buddyMark(42)}</span><div><b>白白带回了 AI 灵感</b><small>没有分数，也不是标准答案</small></div></div>
     ${saved.suggestion ? `<div class="childAiTip"><b>🎯 这次只试一个小变化</b><p>${esc(saved.suggestion)}</p></div>` : ""}
     ${saved.examples.length ? `<div class="childAiExamples"><b>🌈 同一句话，可以有不同写法</b>${saved.examples.slice(0, 3).map((x, i) => {
       const inGems = aiExampleInGems(key, x.text);
@@ -1197,7 +1223,7 @@ function requestChildAiIdeas(ctx, host) {
   }
   const token = deviceAiToken();
   if (!token) return;
-  host.innerHTML = `<div class="childAiLoading">🦡 小獾正在找三种新灵感…</div>`;
+  host.innerHTML = `<div class="childAiLoading">${buddyMark(32)} 白白正在找三种新灵感…</div>`;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 85000);
   const payload = {
@@ -1210,7 +1236,7 @@ function requestChildAiIdeas(ctx, host) {
     clearTimeout(timer);
     if (auth) { try { localStorage.removeItem(AI_DEVICE_TOKEN_KEY); } catch (e) {} }
     if (!host.isConnected) return;
-    host.innerHTML = `<div class="childAiOffline">${auth ? "🦡 AI 灵感需要爸爸妈妈在家长设置里重新开启。" : "🦡 AI 灵感暂时没赶上，前面小獾的反馈照样有效。<button class=\"childAiRetry\">再找一次</button>"}</div>`;
+    host.innerHTML = `<div class="childAiOffline">${auth ? "AI 灵感需要爸爸妈妈在家长设置里重新开启。" : "AI 灵感暂时没赶上，前面白白的反馈照样有效。<button class=\"childAiRetry\">再找一次</button>"}</div>`;
     const retry = host.querySelector(".childAiRetry");
     if (retry) retry.onclick = () => requestChildAiIdeas(ctx, host);
   };
@@ -1252,13 +1278,13 @@ function renderAiPanel(ctx) {
   const raw = S.aiReviews[key] && S.aiReviews[key].data, saved = raw ? normalizeAiReview(raw) : null;
   const tokenReady = !!aiToken();
   const deviceReady = !!deviceAiToken();
-  const tokenForm = `<div class="aiStatus">${saved ? "访问口令已过期，请重新输入。" : "第一次使用，请输入你设置的<b>家长访问口令</b>。"}它不会进入学习存档或备份。</div><input class="aiTokenInput" type="password" autocomplete="off" placeholder="48 位家长访问口令"><label class="aiRemember"><input class="aiRememberDevice" type="checkbox" checked> 在这台家庭设备开启“小獾 AI 即时灵感”</label><button class="btn small aiSaveToken" data-ai-key="${key}" style="margin-top:9px">确认使用</button>`;
+  const tokenForm = `<div class="aiStatus">${saved ? "访问口令已过期，请重新输入。" : "第一次使用，请输入你设置的<b>家长访问口令</b>。"}它不会进入学习存档或备份。</div><input class="aiTokenInput" type="password" autocomplete="off" placeholder="48 位家长访问口令"><label class="aiRemember"><input class="aiRememberDevice" type="checkbox" checked> 在这台家庭设备开启“白白 AI 即时灵感”</label><button class="btn small aiSaveToken" data-ai-key="${key}" style="margin-top:9px">确认使用</button>`;
   const savedActions = `<div class="aiActions"><button class="btn small ghost aiGenerate" data-ai-key="${key}">重新生成</button>${ctx.allowComment ? `<button class="btn small ghost aiUseComment" data-ai-key="${key}">放入家长评语</button>` : ""}<button class="aiChangeToken" data-ai-key="${key}">更换访问口令</button></div>`;
   return `<div class="card aiRef" data-ai-card="${key}">
     <div class="aiTitle">✨ AI 批阅参考 <span>仅家长可见</span></div>
     ${saved ? `${aiResultHtml(saved)}${tokenReady ? savedActions : tokenForm}` : tokenReady ? `<div class="aiStatus">准备好后手动生成。只会发送本页的题目和原文，不发送姓名、学校、钱包或其他学习记录。</div><button class="btn small aiGenerate" data-ai-key="${key}" style="margin-top:9px">生成 AI 批阅参考</button><button class="aiChangeToken" data-ai-key="${key}">更换访问口令</button>` : tokenForm}
-    ${deviceReady ? `<div class="aiChildState on">✅ 这台设备已开启：孩子点“让小獾看看”会直接收到 AI 建议和三条例句。</div>` : tokenReady ? `<button class="btn small ghost aiEnableChild" style="margin-top:8px">在这台设备开启“小獾 AI 即时灵感”</button>` : ""}
-    <div class="aiSafe">🔒 DeepSeek API Key 始终保存在腾讯云函数。家长端只看亮点和疑似检查；优化建议与三条例句只在孩子点“让小獾看看”后出现。孩子看不到口令、评分、疑似问题或家长评语草稿。</div>
+    ${deviceReady ? `<div class="aiChildState on">✅ 这台设备已开启：孩子点“让白白看看”会直接收到 AI 建议和三条例句。</div>` : tokenReady ? `<button class="btn small ghost aiEnableChild" style="margin-top:8px">在这台设备开启“白白 AI 即时灵感”</button>` : ""}
+    <div class="aiSafe">🔒 DeepSeek API Key 始终保存在腾讯云函数。家长端只看亮点和疑似检查；优化建议与三条例句只在孩子点“让白白看看”后出现。孩子看不到口令、评分、疑似问题或家长评语草稿。</div>
   </div>`;
 }
 function requestAiReview(key, button, refresh) {
@@ -1336,7 +1362,7 @@ function bindAiPanels(refresh) {
     try { localStorage.setItem(AI_DEVICE_TOKEN_KEY, v); } catch (e) {}
     const pendingComment = $("#cmtArea") ? $("#cmtArea").value : null;
     refresh(); if (pendingComment !== null && $("#cmtArea")) $("#cmtArea").value = pendingComment;
-    toast("✅ 这台设备已开启小獾 AI 即时灵感", 2200);
+    toast("✅ 这台设备已开启白白 AI 即时灵感", 2200);
   });
   $$(".aiChangeToken").forEach(b => b.onclick = () => {
     const pendingComment = $("#cmtArea") ? $("#cmtArea").value : null;
@@ -1672,6 +1698,16 @@ updateCoinBox();
 navStack = [renderHome];
 renderHome();
 save();
+/* 从英语衣橱回来时，立即换成刚保存的白白造型；金币也一起重读。 */
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden) {
+    W = loadWallet(); updateCoinBox();
+    if ($("#scr-home").classList.contains("on")) renderHome();
+  }
+});
+window.addEventListener("storage", e => {
+  if (e.key === SHARED_PET_KEY && $("#scr-home").classList.contains("on")) renderHome();
+});
 if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
   navigator.serviceWorker.register("sw.js").catch(() => {});
 }

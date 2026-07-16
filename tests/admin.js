@@ -93,7 +93,7 @@ const S = () => w.eval("S");
   ok(aiBody.text.includes("绿色的大馒头") && aiBody.grade === "小学四年级", "★ 云函数收到当前题目和原文及四年级信息");
   ok(aiBody.requirements.includes("不打总分") && !aiBody.name && !aiBody.wallet, "★ 请求明确不打总分，且不发送姓名或钱包数据");
   ok($("#scr-reviewOne").textContent.includes("让山的样子很具体") && $("#scr-reviewOne").textContent.includes("疑似需要检查"), "★ 家长后台保留原文亮点和疑似检查参考");
-  ok(!$("#scr-reviewOne .aiPart.suggest") && $$("#scr-reviewOne .aiExampleText").length === 0, "★ 优化建议和三条例句不在家长后台展示，只在「让小獾看看」出现");
+  ok(!$("#scr-reviewOne .aiPart.suggest") && $$("#scr-reviewOne .aiExampleText").length === 0, "★ 优化建议和三条例句不在家长后台展示，只在「让白白看看」出现");
   ok(!w.document.querySelector("iframe[name^='twAiFrame_']"), "★ AI 请求不再创建会被腾讯网关下载的隐藏 iframe");
   ok($("#cmtArea").value.includes("还没提交"), "★ AI 返回后仍保留家长未提交的评语");
   $("#scr-reviewOne .aiUseComment").click();
@@ -128,7 +128,7 @@ const S = () => w.eval("S");
   ok($("#scr-essayWrite").innerHTML.includes("爸爸妈妈的评语"), "★ 孩子打开作文能看到评语");
   ok($("#scr-essayWrite").innerHTML.includes("大馒头"), "★ 评语原文显示给她");
   ok($("#scr-essayWrite").innerHTML.includes("⭐⭐⭐⭐"), "★ 星级也显示");
-  ok(!$("#scr-essayWrite .childAiCoach"), "★ AI 即时建议不再放在完整作文页，触发位置固定为「让小獾看看」");
+  ok(!$("#scr-essayWrite .childAiCoach"), "★ AI 即时建议不再放在完整作文页，触发位置固定为「让白白看看」");
   // 未批阅时显示"等家长看"
   w.eval("S.essays.e1.reviewed=false;save();navStack=[()=>renderEssayWrite(ESSAYS[0])];renderEssayWrite(ESSAYS[0]);");
   ok($("#scr-essayWrite").innerHTML.includes("等爸爸妈妈看"), "★ 未批阅时提示「拿给他们看」");

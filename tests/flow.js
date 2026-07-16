@@ -24,7 +24,11 @@ const ok = (c, m) => { c ? pass++ : fail++; console.log(`  ${c ? "✓" : "✗ FA
   console.log("— 营地（首页）—");
   ok($("#scr-home").classList.contains("on"), "首页显示");
   ok($("#hubLink").href === "https://nevergiveup0618.github.io/learning/", "★ 最顶部可直接返回学习导航页");
-  ok($("#buddyE").textContent === "🦡", "搭档小獾在");
+  ok($("#buddyE .buddyBodyImg")?.src.endsWith("/assets/baibai-base.png") && w.eval("BUDDY.name") === "白白", "★ 首页搭档已换成白白");
+  w.localStorage.setItem("sharedPet_v1", JSON.stringify({v:1,name:"白白",items:[{id:"bb_bow",e:"🎀",x:30,y:20,s:.6,r:-10}]}));
+  w.eval("renderHome()");
+  ok($("#buddyE .buddyShared")?.textContent === "🎀", "★ 英语保存的白白装扮会同步到语文");
+  ok($("#goEnglishWardrobe")?.textContent.includes("去英语给白白挑裙子"), "★ 语文赚的共享金币有清楚的白白衣橱去向");
   ok($("#scr-home").innerHTML.includes("今日探险"), "今日探险任务卡");
   ok($$(".tab").length === 5, "5个导航（营地/寻宝/脑洞/法宝/宝库）");
 
@@ -69,7 +73,7 @@ const ok = (c, m) => { c ? pass++ : fail++; console.log(`  ${c ? "✓" : "✗ FA
   ok(S().stops.guilin.read === true && !!$("#cardsGo"), "★ 完成4次互动后才记为已读");
   $("#cardsGo").click();
 
-  console.log("— 寻宝任务：微写作 + 小獾即时回应（核心）—");
+  console.log("— 寻宝任务：微写作 + 白白即时回应（核心）—");
   $$("#scr-stop [data-q]")[0].click();
   ok($("#scr-write").classList.contains("on"), "进入写作页");
   ok($("#scr-write").innerHTML.includes("比喻杖"), "任务用的是比喻杖");
@@ -113,8 +117,8 @@ const ok = (c, m) => { c ? pass++ : fail++; console.log(`  ${c ? "✓" : "✗ FA
   ok(jb.includes("⭐⭐⭐"), "★ 用上比喻且够长 → 3 星");
   ok(jb.includes("比喻词"), "告诉她检测到了什么");
   ok(!!$("#jSave"), "可以收进宝库");
-  ok(childAiRequest.body.reviewToken === "review-secret" && childAiRequest.body.type === "quest", "★ 点「让小獾看看」会用家长授权直接请求 AI 即时灵感");
-  ok($$("#childAiLive .childAiExample").length === 3 && $("#childAiLive").textContent.includes("再补一种山的颜色"), "★ 同一张小獾反馈卡立即展示一个建议和三条例句");
+  ok(childAiRequest.body.reviewToken === "review-secret" && childAiRequest.body.type === "quest", "★ 点「让白白看看」会用家长授权直接请求 AI 即时灵感");
+  ok($$("#childAiLive .childAiExample").length === 3 && $("#childAiLive").textContent.includes("再补一种山的颜色"), "★ 同一张白白反馈卡立即展示一个建议和三条例句");
   ok(!$("#childAiLive").textContent.includes("疑似空泛") && !$("#childAiLive").textContent.includes("只给家长"), "★ 孩子即时反馈不会泄露疑似问题或家长草稿");
   const aiDailyBefore = S().daily.gems, aiWalletBefore = w.localStorage.getItem("sharedWallet_v1");
   $("#childAiLive .childAiSave").click();
@@ -166,14 +170,14 @@ const ok = (c, m) => { c ? pass++ : fail++; console.log(`  ${c ? "✓" : "✗ FA
   ok($$("#scr-passport .stamp").length === 16 && $$("#scr-passport .routeMedal").length === 3, "16枚城市章和3枚路线勋章都有位置");
   w.eval("S.stops.guilin.done.push(1);save();renderPassport();");
   ok($$("#scr-passport .stamp.earned").length === 1 && $("#scr-passport").textContent.includes("桂林"), "★ 每站完成2题自动获得城市纪念章");
-  ok($("#scr-passport [data-gear='compass']").classList.contains("open"), "★ 城市章会永久解锁小獾装备");
+  ok($("#scr-passport [data-gear='compass']").classList.contains("open"), "★ 城市章会永久解锁白白装备");
   $("#scr-passport [data-gear='compass']").click();
   ok(S().gear.hand === "compass" && $("#passportBuddy").textContent.includes("🧭"), "★ 装上指南针后立即显示");
   w.eval("ROUTES[0].stops.forEach(id=>S.stops[id]={read:true,done:[0,1],stars:{0:3,1:3}});save();renderPassport();");
   ok($$("#scr-passport .routeMedal.earned").length === 1, "★ 集齐整条路线的城市章后获得路线勋章");
   ok($("#scr-passport [data-gear='tent']").classList.contains("open"), "★ 路线勋章解锁稀有探险装备");
   w.eval("renderHome()");
-  ok($("#buddyE").textContent.includes("🧭"), "★ 首页小獾同步穿戴探险装备");
+  ok($("#buddyE").textContent.includes("🧭"), "★ 首页白白同步穿戴探险装备");
 
   console.log("— 💎 宝库 —");
   $$(".tab").find(t => t.dataset.tab === "gems").click();
