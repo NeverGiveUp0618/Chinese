@@ -43,6 +43,8 @@ S.gear = Object.assign(defState().gear, S.gear || {});
 S.aiReviews = S.aiReviews || {};
 if (S.daily.date !== todayStr()) S.daily = defState().daily;
 function save() { try { localStorage.setItem(LS_KEY, JSON.stringify(S)); } catch (e) {} }
+function isAiGem(g) { return !!g && g.kind === "ai-example"; }
+function ownGems() { return S.gems.filter(g => !isAiGem(g)); }
 
 /* ---------------- 共享钱包（跨科目） ---------------- */
 function loadWallet() {
@@ -201,6 +203,7 @@ function bump(k) {
 function renderHome() {
   const d = taskDone();
   const learned = TOOLS.filter(t => toolS(t.id).learned).length;
+  const ownCount = ownGems().length, aiCount = S.gems.length - ownCount;
   const nextStop = STOPS.find((s, i) => stopUnlocked(i) && stopS(s.id).done.length < s.quests.length) || STOPS[0];
   const nextStamp = STOPS.find((s, i) => stopUnlocked(i) && !hasStamp(s.id));
   const target = !d.t1 ? "再完成 1 个寻宝任务，就向今日盖章前进一步" : !d.t2 ? "再写 1 个脑洞，今天就快完成啦" : !d.t3 ? "再收进 1 句宝物，就能盖今日探险章" : "今日探险章已到手，转盘券已送到共享钱包";
@@ -234,9 +237,9 @@ function renderHome() {
     <div style="height:12px"></div>
     <div class="homeGrid">
       <div class="card" id="goIdea"><div class="hIcon">💡</div><div class="hName">脑洞任务</div><div class="hSub">随便写，没有对错</div></div>
-      <div class="card" id="goGems"><div class="hIcon">💎</div><div class="hName">我的宝库</div><div class="hSub">${S.gems.length} 件宝物</div></div>
+      <div class="card" id="goGems"><div class="hIcon">💎</div><div class="hName">我的宝库</div><div class="hSub">${ownCount} 件原创${aiCount ? ` · ${aiCount} 条 AI 灵感` : ""}</div></div>
       <div class="card" id="goTools"><div class="hIcon">🧰</div><div class="hName">六件法宝</div><div class="hSub">已学会 ${learned}/6</div></div>
-      <div class="card ${S.gems.length >= 2 ? "transferReady" : ""}" id="goEssay"><div class="hIcon">✍️</div><div class="hName">把宝物写成作文</div><div class="hSub">${S.gems.length ? `带 ${S.gems.length} 句自己的素材去写` : "先寻宝，周末再来组装"}</div></div>
+      <div class="card ${S.gems.length >= 2 ? "transferReady" : ""}" id="goEssay"><div class="hIcon">✍️</div><div class="hName">把宝物写成作文</div><div class="hSub">${S.gems.length ? `带 ${S.gems.length} 句素材去写` : "先寻宝，周末再来组装"}</div></div>
     </div>
     <div style="height:10px"></div>
     <div style="text-align:center;font-size:11px;color:#b0997a;padding:8px" id="parentLink">家长设置</div>`;
@@ -688,12 +691,13 @@ function renderTeach(t) {
 /* ================= 宝库 ================= */
 function renderGems() {
   const gs = S.gems;
+  const ownCount = ownGems().length, aiCount = gs.length - ownCount;
   $("#scr-gems").innerHTML = `
     <div class="card" style="text-align:center;padding:12px">
-      <div style="font-size:15px;font-weight:800;color:#8a6a2a">💎 我的宝库（${gs.length} 件）</div>
-      <div style="font-size:12px;color:#b0997a;margin-top:2px">这些都是<b>你自己写的</b>。写作文时直接从这里拿来用！</div>
+      <div style="font-size:15px;font-weight:800;color:#8a6a2a">💎 我的宝库（${ownCount} 件原创${aiCount ? ` · ${aiCount} 条灵感` : ""}）</div>
+      <div style="font-size:12px;color:#b0997a;margin-top:2px">原创宝物是<b>你自己写的</b>；AI 参考会单独标出来，拿灵感后记得换成自己的说法。</div>
     </div>
-    ${gs.length ? `<div class="card remixCall" id="goRemix">
+    ${ownCount ? `<div class="card remixCall" id="goRemix">
       <span style="font-size:34px">🔄</span><span style="flex:1"><b>宝物变身挑战</b><small>选一句自己写的，换一种法宝再写一次</small></span><span>▶</span>
     </div>` : ""}
     ${gs.length ? gs.map((g, i) => {
@@ -701,8 +705,8 @@ function renderGems() {
       return `<div class="gem">
         <div class="gemTxt">${esc(g.txt)}</div>
         <div class="gemMeta">
-          <span><span class="gemTag">${t ? t.icon + " " + t.short : "💡 脑洞"}</span>　${esc(g.from)}</span>
-          <span>${"⭐".repeat(g.stars || 1)}　${g.d}</span>
+          <span><span class="gemTag ${isAiGem(g) ? "ai" : ""}">${isAiGem(g) ? "✨ AI 参考·非原创" : t ? t.icon + " " + t.short : "💡 脑洞"}</span>　${esc(g.from)}</span>
+          <span>${isAiGem(g) ? "灵感收藏" : "⭐".repeat(g.stars || 1)}　${g.d}</span>
         </div>
       </div>`;
     }).join("") : `<div class="card" style="text-align:center;color:#b0997a;font-size:14px;padding:26px">宝库还是空的<br>去寻宝地图写一句，就有第一件宝物了 💎</div>`}`;
@@ -712,7 +716,7 @@ function renderGems() {
 
 /* 宝物变身：练“迁移和修改”，仍然只判有没有使用目标技巧。 */
 function renderRemix() {
-  const sources = S.gems.slice(0, 6);
+  const sources = ownGems().slice(0, 6);
   if (!sources.length) { toast("先写一句放进宝库，就能玩变身挑战～"); goBack(); return; }
   let source = null, target = null, saved = false;
   $("#scr-remix").innerHTML = `
@@ -791,6 +795,7 @@ function renderEssayWrite(e) {
   if (!S.essays[e.id]) S.essays[e.id] = { paras: e.outline.map(() => ""), done: false, score: 0, reviewed: false, comment: "" };
   const es = S.essays[e.id];
   const gemPool = S.gems.slice(0, 6);
+  const fullText = (es.paras || []).join("\n");
   $("#scr-essayWrite").innerHTML = `
     <div class="card" style="text-align:center;padding:12px">
       <div style="font-size:34px">${e.icon}</div>
@@ -804,10 +809,11 @@ function renderEssayWrite(e) {
       <div class="ct" style="color:#a08a6a">⏳ 已交稿，等爸爸妈妈看</div>
       <div class="cb" style="font-size:13px">拿给他们看一眼吧——他们读完给你写评语，你还能再拿 2 张转盘券。</div>
     </div>` : ""}
+    ${renderChildAiCoach({ kind: "essay", id: e.id, title: e.title, text: fullText })}
     ${gemPool.length ? `<div class="card" style="padding:12px">
       <div style="font-size:13px;font-weight:700;color:#8a6a2a;margin-bottom:6px">💎 从你的宝库里挑素材用（点一下复制）</div>
       ${gemPool.map((g, i) => `<div class="gem" style="margin-bottom:6px;padding:8px 10px;cursor:pointer" data-g="${i}">
-        <div class="gemTxt" style="font-size:13px">${esc(g.txt.slice(0, 40))}${g.txt.length > 40 ? "…" : ""}</div>
+        <div class="gemTxt" style="font-size:13px">${isAiGem(g) ? `<span class="gemTag ai">✨ AI 参考·非原创</span><br>` : ""}${esc(g.txt.slice(0, 40))}${g.txt.length > 40 ? "…" : ""}</div>
       </div>`).join("")}
     </div>` : ""}
     ${e.outline.map((o, i) => `
@@ -838,6 +844,7 @@ function renderEssayWrite(e) {
       sndCoin(); toast("💎 宝物已放进段落里", 1400);
     };
   });
+  bindChildAiCoach(() => renderEssayWrite(e));
   $("#eSave").onclick = () => { save(); sndCoin(); toast("💾 草稿已保存", 1500); };
   $("#eDone").onclick = () => {
     const written = es.paras.filter(x => x && x.trim()).length;
@@ -906,7 +913,7 @@ function renderParent() {
     return;
   }
   const w = loadWallet();
-  const tot = S.gems.length;
+  const tot = ownGems().length;
   const days = Object.keys(S.checkins).length;
   const pending = ESSAYS.filter(e => { const es = S.essays[e.id]; return es && es.done && !es.reviewed; }).length;
   $("#scr-parent").innerHTML = `
@@ -1097,6 +1104,17 @@ function aiList(v) {
   if (Array.isArray(v)) return v.map(x => typeof x === "string" ? x : (x.text || x.content || JSON.stringify(x))).filter(Boolean);
   return [String(v)];
 }
+function aiExamples(v) {
+  if (!Array.isArray(v)) return [];
+  return v.map((item, i) => {
+    if (typeof item === "string") return { label: `参考写法 ${i + 1}`, text: item };
+    item = item || {};
+    return {
+      label: String(item.label || item.focus || item.title || `参考写法 ${i + 1}`),
+      text: String(item.text || item.suggestion || item.suggested || item.rewrite || item.content || "")
+    };
+  }).filter(x => x.text).slice(0, 3);
+}
 function normalizeAiReview(raw) {
   let x = raw;
   for (let i = 0; i < 3 && x && typeof x === "object"; i++) {
@@ -1116,28 +1134,62 @@ function normalizeAiReview(raw) {
   const checks = Array.isArray(rawChecks)
     ? rawChecks.map(item => typeof item === "string" ? item : `${item.quote ? `“${item.quote}”` : "疑似问题"}${item.issue ? `——${item.issue}` : item.text || item.content || ""}`).filter(Boolean)
     : aiList(rawChecks);
+  const rewrite = String(rw.suggestion || rw.suggested || rw.after || rw.rewrite || x.rewritten || x["建议句"] || "");
+  const examples = aiExamples(x.examples || x.exampleSentences || x.rewriteExamples || rw.examples || rw.variants || x["参考例句"]);
+  if (!examples.length && rewrite) examples.push({ label: "参考写法 1", text: rewrite });
   const out = {
     highlights,
     checks,
     suggestion: String(x.priorityTip || x.suggestion || x.prioritySuggestion || x.improvement || x["优先建议"] || x["修改建议"] || ""),
     original: String(rw.original || rw.before || x.original || x["原句"] || ""),
-    rewrite: String(rw.suggestion || rw.suggested || rw.after || rw.rewrite || x.rewritten || x["建议句"] || ""),
+    rewrite,
+    examples,
     summary: String(x.summary || x.content || x.message || x["总体参考"] || ""),
     commentDraft: String(x.parentCommentDraft || x.commentDraft || x.parentComment || x["家长评语草稿"] || "")
   };
   return out;
 }
 function aiResultHasContent(r) {
-  return r && (r.highlights.length || r.checks.length || r.suggestion || r.rewrite || r.summary || r.commentDraft);
+  return r && (r.highlights.length || r.checks.length || r.suggestion || r.rewrite || r.examples.length || r.summary || r.commentDraft);
 }
 function aiResultHtml(r) {
   return `<div class="aiResult">
     ${r.highlights.length ? `<div class="aiPart good"><b>🌟 原文亮点</b>${r.highlights.map(x => `<p>${esc(x)}</p>`).join("")}</div>` : ""}
     ${r.checks.length ? `<div class="aiPart check"><b>🔎 疑似需要检查</b>${r.checks.map(x => `<p>${esc(x)}</p>`).join("")}</div>` : ""}
     ${r.suggestion ? `<div class="aiPart suggest"><b>🎯 一个优先建议</b><p>${esc(r.suggestion)}</p></div>` : ""}
-    ${r.original || r.rewrite ? `<div class="aiPart rewrite"><b>✏️ 一处示范修改</b>${r.original ? `<p><span>原句</span>${esc(r.original)}</p>` : ""}${r.rewrite ? `<p><span>建议</span>${esc(r.rewrite)}</p>` : ""}<small>只供参考，不会覆盖孩子原文。</small></div>` : ""}
+    ${r.original || r.examples.length ? `<div class="aiPart rewrite"><b>✏️ 参考写法（${r.examples.length} 条）</b>${r.original ? `<p><span>原句</span>${esc(r.original)}</p>` : ""}${r.examples.map((x, i) => `<p class="aiExampleText"><span>${esc(x.label || `写法 ${i + 1}`)}</span>${esc(x.text)}</p>`).join("")}<small>只供参考，不会覆盖孩子原文；建议和例句可以给孩子看。</small></div>` : ""}
     ${r.summary ? `<div class="aiPart"><b>💬 其他参考</b><p>${esc(r.summary)}</p></div>` : ""}
   </div>`;
+}
+function aiReviewKey(ctx) { return `${ctx.kind}:${ctx.id || "item"}:${aiHash(ctx.text)}`; }
+function aiExampleInGems(key, text) {
+  return S.gems.some(g => isAiGem(g) && g.aiReviewKey === key && g.txt === text);
+}
+function renderChildAiCoach(ctx) {
+  const key = aiReviewKey(ctx), raw = S.aiReviews[key] && S.aiReviews[key].data, saved = raw ? normalizeAiReview(raw) : null;
+  if (!saved || (!saved.suggestion && !saved.examples.length)) return "";
+  return `<div class="card childAiCoach" data-child-ai-key="${key}">
+    <div class="childAiHead"><span>🦡✨</span><div><b>小獾带回了 AI 灵感</b><small>没有分数，也不是标准答案</small></div></div>
+    ${saved.suggestion ? `<div class="childAiTip"><b>🎯 这次只试一个小变化</b><p>${esc(saved.suggestion)}</p></div>` : ""}
+    ${saved.examples.length ? `<div class="childAiExamples"><b>🌈 同一句话，可以有不同写法</b>${saved.examples.slice(0, 3).map((x, i) => {
+      const inGems = aiExampleInGems(key, x.text);
+      return `<div class="childAiExample"><span class="childAiNum">${i + 1}</span><div><small>${esc(x.label || `参考写法 ${i + 1}`)}</small><p>${esc(x.text)}</p></div><button class="btn small ghost childAiSave" data-ai-example="${i}" ${inGems ? "disabled" : ""}>${inGems ? "已收藏" : "💎 收进宝库"}</button></div>`;
+    }).join("")}</div>` : ""}
+    <div class="childAiNote">这些是 AI 灵感，不是你的原创。喜欢哪一种想法，可以收藏，再换成自己的说法。</div>
+  </div>`;
+}
+function bindChildAiCoach(refresh) {
+  $$(".childAiCoach .childAiSave").forEach(button => button.onclick = () => {
+    const box = button.closest(".childAiCoach"), key = box.dataset.childAiKey;
+    const raw = S.aiReviews[key] && S.aiReviews[key].data, saved = raw ? normalizeAiReview(raw) : null;
+    const example = saved && saved.examples[+button.dataset.aiExample];
+    if (!example || aiExampleInGems(key, example.text)) { toast("这条灵感已经在宝库里啦"); return; }
+    S.gems.unshift({
+      txt: example.text, tool: "ai", from: "AI 灵感参考", d: todayStr(), stars: 0,
+      kind: "ai-example", aiReviewKey: key, exampleIndex: +button.dataset.aiExample
+    });
+    save(); sndCoin(); toast("💎 已收藏为 AI 参考，不计原创任务", 2200); refresh();
+  });
 }
 function aiCommentDraft(r) {
   if (r.commentDraft) return r.commentDraft;
@@ -1145,14 +1197,14 @@ function aiCommentDraft(r) {
   return r.suggestion ? `${a}\n下次可以试试：${r.suggestion}` : a;
 }
 function renderAiPanel(ctx) {
-  const key = `${ctx.kind}:${ctx.id || "item"}:${aiHash(ctx.text)}`;
+  const key = aiReviewKey(ctx);
   aiContexts[key] = ctx;
-  const saved = S.aiReviews[key] && S.aiReviews[key].data;
+  const raw = S.aiReviews[key] && S.aiReviews[key].data, saved = raw ? normalizeAiReview(raw) : null;
   const tokenReady = !!aiToken();
   return `<div class="card aiRef" data-ai-card="${key}">
     <div class="aiTitle">✨ AI 批阅参考 <span>仅家长可见</span></div>
     ${saved ? `${aiResultHtml(saved)}<div class="aiActions"><button class="btn small ghost aiGenerate" data-ai-key="${key}">重新生成</button>${ctx.allowComment ? `<button class="btn small ghost aiUseComment" data-ai-key="${key}">放入家长评语</button>` : ""}<button class="aiChangeToken" data-ai-key="${key}">更换访问口令</button></div>` : tokenReady ? `<div class="aiStatus">准备好后手动生成。只会发送本页的题目和原文，不发送姓名、学校、钱包或其他学习记录。</div><button class="btn small aiGenerate" data-ai-key="${key}" style="margin-top:9px">生成 AI 批阅参考</button><button class="aiChangeToken" data-ai-key="${key}">更换访问口令</button>` : `<div class="aiStatus">第一次使用，请输入你设置的<b>家长访问口令</b>。它只保存在当前浏览器会话，关闭浏览器后自动清除。</div><input class="aiTokenInput" type="password" autocomplete="off" placeholder="48 位家长访问口令"><button class="btn small aiSaveToken" data-ai-key="${key}" style="margin-top:9px">本次会话使用</button>`}
-    <div class="aiSafe">🔒 DeepSeek API Key 始终保存在腾讯云函数；AI 不打星、不自动提交，也不修改孩子原文。最终评价由家长确认。</div>
+    <div class="aiSafe">🔒 DeepSeek API Key 始终保存在腾讯云函数；AI 不打星、不自动提交，也不修改孩子原文。孩子端只会看到一个建议和三条参考写法，其余内容仍仅家长可见。</div>
   </div>`;
 }
 function requestAiReview(key, button, refresh) {
@@ -1171,7 +1223,7 @@ function requestAiReview(key, button, refresh) {
     type: ctx.kind, grade: "小学四年级", title: ctx.title || "日常练笔",
     prompt: ctx.prompt || "", text: ctx.text, content: ctx.text, essay: ctx.text,
     targetTechnique: ctx.target || "", sourceText: ctx.sourceText || "",
-    requirements: "只给家长批阅参考：引用原文亮点；指出疑似问题；只给一个优先建议；提供一处示范修改。不打总分，不覆盖原文。"
+    requirements: "给家长完整批阅参考；孩子端只展示一个不评价好坏的优化建议和三条不同参考写法。三条例句只改同一句，不重写全文；不打总分，不覆盖原文。"
   };
   const controller = new AbortController();
   let finished = false;
@@ -1229,7 +1281,8 @@ function bindAiPanels(refresh) {
   });
   $$(".aiGenerate").forEach(b => b.onclick = () => requestAiReview(b.dataset.aiKey, b, refresh));
   $$(".aiUseComment").forEach(b => b.onclick = () => {
-    const saved = S.aiReviews[b.dataset.aiKey] && S.aiReviews[b.dataset.aiKey].data, area = $("#cmtArea");
+    const raw = S.aiReviews[b.dataset.aiKey] && S.aiReviews[b.dataset.aiKey].data;
+    const saved = raw ? normalizeAiReview(raw) : null, area = $("#cmtArea");
     if (!saved || !area) return;
     const draft = aiCommentDraft(saved);
     area.value = area.value.trim() ? area.value.trim() + "\n" + draft : draft;
@@ -1239,7 +1292,7 @@ function bindAiPanels(refresh) {
 function renderReview(filter = "all") {
   const written = ESSAYS.filter(e => { const es = S.essays[e.id]; return es && (es.paras || []).some(p => p && p.trim()); });
   const pending = written.filter(e => S.essays[e.id].done && !S.essays[e.id].reviewed);
-  const gems = S.gems.map((g, i) => ({ g, i, k: gemKind(g) }));
+  const gems = S.gems.map((g, i) => ({ g, i, k: gemKind(g) })).filter(x => !isAiGem(x.g));
   const filteredEssays = filter === "pending" ? pending : (filter === "all" || filter === "essay" ? written : []);
   const filteredGems = filter === "all" ? gems : gems.filter(x => x.k === filter);
   const tabs = [
@@ -1383,7 +1436,7 @@ function renderReport() {
   for (let i = 6; i >= 0; i--) {
     const d = new Date(Date.now() - i * 864e5);
     const k = d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
-    days.push({ k, lb: "日一二三四五六"[d.getDay()], n: S.gems.filter(g => g.d === k).length });
+    days.push({ k, lb: "日一二三四五六"[d.getDay()], n: ownGems().filter(g => g.d === k).length });
   }
   const maxN = Math.max(3, ...days.map(d => d.n));
   const remixes = S.remixes || [], remixHits = remixes.filter(x => x.hit).length;
@@ -1442,7 +1495,7 @@ function renderReport() {
 
 /* ---------------- 💎 宝库全览 / 导出 ---------------- */
 function renderGemsAdmin() {
-  const gs = S.gems;
+  const gs = ownGems();
   $("#scr-gemsAdmin").innerHTML = `
     <div class="card" style="padding:12px;font-size:12.5px;color:#6a5a42;line-height:1.8">
       这 ${gs.length} 句话<b>全是她自己写的</b>。这是她的成长档案——<b>偶尔翻出来念给她听，比任何表扬都管用。</b>

@@ -76,7 +76,11 @@ const S = () => w.eval("S");
         highlight:{quote:"绿色的大馒头",reason:"让山的样子很具体。"},
         checks:[{quote:"一个个",issue:"可以请孩子自己检查是否需要保留。"}],
         priorityTip:"下一次只补一句米粉的颜色。",
-        rewrite:{ original:"米粉滑溜溜的。", suggestion:"雪白的米粉滑溜溜地钻进筷子间。" },
+        rewrite:{ original:"米粉滑溜溜的。", examples:[
+          {label:"加颜色",text:"雪白的米粉滑溜溜地钻进筷子间。"},
+          {label:"加香味",text:"米粉的香气直往我的鼻子里钻。"},
+          {label:"加动作",text:"我夹起米粉，吹了吹，一口吸进嘴里。"}
+        ] },
         parentCommentDraft:"我喜欢绿色的大馒头这个比喻。下次可以补一句米粉的颜色。"
       }}) };
   };
@@ -87,7 +91,7 @@ const S = () => w.eval("S");
   ok(aiBody.reviewToken === "review-secret", "★ 访问口令经 HTTPS 请求正文发送，不再放在自定义请求头");
   ok(aiBody.text.includes("绿色的大馒头") && aiBody.grade === "小学四年级", "★ 云函数收到当前题目和原文及四年级信息");
   ok(aiBody.requirements.includes("不打总分") && !aiBody.name && !aiBody.wallet, "★ 请求明确不打总分，且不发送姓名或钱包数据");
-  ok($("#scr-reviewOne").textContent.includes("让山的样子很具体") && $("#scr-reviewOne").textContent.includes("一个优先建议") && $("#scr-reviewOne").textContent.includes("雪白的米粉"), "★ 完整兼容云函数的亮点、检查、一个建议和示范修改结构");
+  ok($("#scr-reviewOne").textContent.includes("让山的样子很具体") && $("#scr-reviewOne").textContent.includes("一个优先建议") && $$("#scr-reviewOne .aiExampleText").length === 3, "★ 完整兼容云函数的亮点、检查、一个建议和三条例句结构");
   ok(!w.document.querySelector("iframe[name^='twAiFrame_']"), "★ AI 请求不再创建会被腾讯网关下载的隐藏 iframe");
   ok($("#cmtArea").value.includes("还没提交"), "★ AI 返回后仍保留家长未提交的评语");
   $("#scr-reviewOne .aiUseComment").click();
@@ -118,6 +122,17 @@ const S = () => w.eval("S");
   ok($("#scr-essayWrite").innerHTML.includes("爸爸妈妈的评语"), "★ 孩子打开作文能看到评语");
   ok($("#scr-essayWrite").innerHTML.includes("大馒头"), "★ 评语原文显示给她");
   ok($("#scr-essayWrite").innerHTML.includes("⭐⭐⭐⭐"), "★ 星级也显示");
+  ok(!!$("#scr-essayWrite .childAiCoach") && $("#scr-essayWrite .childAiCoach").textContent.includes("下一次只补一句米粉的颜色"), "★ 孩子端能立即看到不评价好坏的一个优化建议");
+  ok($$("#scr-essayWrite .childAiExample").length === 3 && $$("#scr-essayWrite .childAiSave").length === 3, "★ 孩子端展示三条例句，每条都可收藏");
+  ok(!$("#scr-essayWrite .childAiCoach").textContent.includes("疑似") && !$("#scr-essayWrite .childAiCoach").textContent.includes("家长评语草稿"), "★ 孩子端不展示疑似问题或家长专属内容");
+  const gemsBeforeAi = S().gems.length, dailyBeforeAi = S().daily.gems;
+  const walletBeforeAi = w.localStorage.getItem("sharedWallet_v1");
+  $("#scr-essayWrite .childAiSave").click();
+  ok(S().gems.length === gemsBeforeAi + 1 && S().gems[0].kind === "ai-example", "★ AI 例句可以收进宝库并标记为参考而非原创");
+  ok(S().daily.gems === dailyBeforeAi && w.localStorage.getItem("sharedWallet_v1") === walletBeforeAi, "★ 收藏 AI 例句不计原创任务、不发奖励");
+  w.eval("renderGems()");
+  ok($("#scr-gems").textContent.includes("AI 参考·非原创"), "★ 宝库醒目标明 AI 参考，不冒充孩子原创");
+  w.eval("S.gems=S.gems.filter(g=>g.kind!=='ai-example');save();renderEssayWrite(ESSAYS[0]);");
   // 未批阅时显示"等家长看"
   w.eval("S.essays.e1.reviewed=false;save();navStack=[()=>renderEssayWrite(ESSAYS[0])];renderEssayWrite(ESSAYS[0]);");
   ok($("#scr-essayWrite").innerHTML.includes("等爸爸妈妈看"), "★ 未批阅时提示「拿给他们看」");

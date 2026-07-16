@@ -283,6 +283,22 @@ body {
 .aiPart small { display:block; margin-top:5px; color:#a394aa; font-size:9px; }
 .aiActions { display:flex; flex-wrap:wrap; align-items:center; gap:6px; margin-top:10px; }
 .aiChangeToken { border:0; background:transparent; padding:5px; color:#9a83a6; font:inherit; font-size:10px; text-decoration:underline; cursor:pointer; }
+.childAiCoach { border:2px solid #b7d99d; background:linear-gradient(145deg,#f8fff2,#eef9e7); padding:13px; }
+.childAiHead { display:flex; align-items:center; gap:9px; color:#52733f; }
+.childAiHead > span { font-size:30px; }
+.childAiHead b { display:block; font-size:15px; }
+.childAiHead small { display:block; margin-top:1px; color:#839b75; font-size:10px; font-weight:500; }
+.childAiTip { margin-top:10px; border-radius:11px; background:#fffdf7; padding:9px 10px; color:#596c4c; }
+.childAiTip b, .childAiExamples > b { display:block; color:#557840; font-size:12px; }
+.childAiTip p { margin:4px 0 0; font-size:13px; line-height:1.7; }
+.childAiExamples { margin-top:10px; display:grid; gap:8px; }
+.childAiExample { display:grid; grid-template-columns:24px minmax(0,1fr); gap:7px; align-items:start; border-radius:12px; background:#fff; padding:9px; box-shadow:0 2px 7px rgba(90,120,65,.08); }
+.childAiNum { display:grid; place-items:center; width:23px; height:23px; border-radius:50%; background:#dff0d1; color:#52733f; font-size:11px; font-weight:800; }
+.childAiExample small { color:#7b976a; font-size:10px; font-weight:700; }
+.childAiExample p { margin:2px 0 7px; color:#4a543f; font-size:13px; line-height:1.7; white-space:pre-wrap; }
+.childAiExample .childAiSave { grid-column:2; justify-self:start; margin-top:-3px; }
+.childAiExample .childAiSave:disabled { opacity:.65; }
+.childAiNote { margin-top:9px; color:#87997b; font-size:10px; line-height:1.6; }
 .parentStats { display:grid; grid-template-columns:repeat(3,1fr); gap:7px; text-align:center; }
 .parentStats div { min-width:0; padding:4px 2px; }
 .parentStats b { display:block; color:#b87324; font-size:20px; }
@@ -290,6 +306,7 @@ body {
 
 /* ---- 宝库 ---- */
 .gem { background: #fffdf7; border-radius: 14px; padding: 11px 13px; margin-bottom: 10px; box-shadow: 0 2px 8px rgba(140,110,70,.12); }
+.gemTag.ai { background:#efe8fa; color:#76588d; }
 .gemTxt { font-size: 14px; line-height: 1.7; color: #4a3c28; }
 .gemMeta { font-size: 11px; color: #b0997a; margin-top: 5px; display: flex; justify-content: space-between; }
 .gemTag { display: inline-block; background: #f5e6c8; color: #8a5a2a; border-radius: 8px; padding: 1px 7px; font-size: 11px; font-weight: 700; }
