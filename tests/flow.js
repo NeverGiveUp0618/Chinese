@@ -39,7 +39,7 @@ const ok = (c, m) => { c ? pass++ : fail++; console.log(`  ${c ? "✓" : "✗ FA
   $("#backBtn").click();
   ok($("#scr-home").classList.contains("on") && $$(".tab").find(t => t.dataset.tab === "home").classList.contains("on"), "★ 页内返回回到营地并恢复营地高亮");
   ok($("#scr-home").innerHTML.includes("今日探险"), "今日探险任务卡");
-  ok($$(".tab").length === 5, "5个导航（营地/寻宝/脑洞/法宝/宝库）");
+  ok($$(".tab").length === 5 && !!$("[data-tab='reading']"), "5个导航（营地/阅读/寻宝/脑洞/宝库）");
 
   console.log("— 寻宝地图 —");
   $$(".tab").find(t => t.dataset.tab === "map").click();
@@ -210,7 +210,8 @@ const ok = (c, m) => { c ? pass++ : fail++; console.log(`  ${c ? "✓" : "✗ FA
   ok(S().gems.length === 3 && S().gems[0].from.includes("宝物变身"), "★ 新写法收进宝库，旧句仍保留");
 
   console.log("— 🧰 六件法宝 —");
-  $$(".tab").find(t => t.dataset.tab === "tools").click();
+  $$(".tab").find(t => t.dataset.tab === "home").click();
+  $("#goTools").click();
   ok($$("#scr-tools .toolCard").length === 6, "6 件法宝");
   ok($("#scr-tools").innerHTML.includes("用过 1 次"), "比喻杖显示使用次数");
   $$("#scr-tools .toolCard")[1].click();

@@ -96,6 +96,33 @@ body {
 .homeGrid .hSub { font-size: 11px; color: #b0997a; margin-top: 2px; }
 .homeGrid .transferReady { border:2px solid #d9a441; background:linear-gradient(145deg,#fffdf7,#fff3d6); }
 .homeGrid .transferReady .hName::after { content:" 可用了"; color:#6a9a4a; font-size:10px; }
+
+/* ---- 阅读探险：分段读、回原文找依据、再做自愿仿写 ---- */
+.readingHero { background:linear-gradient(145deg,#fffdf7,#edf7e8); border:2px solid #d7e8c8; }
+.readingStats { display:flex; gap:7px; margin-top:8px; }
+.readingStats span { flex:1; padding:7px 4px; border-radius:11px; background:rgba(255,255,255,.72); text-align:center; font-size:10px; color:#71805d; }
+.readingStats b { display:block; font-size:17px; color:#6a934e; }
+.readingSeries { display:flex; gap:7px; overflow-x:auto; padding:2px 1px 10px; }
+.readingSeries { scrollbar-width:none; }
+.readingSeries::-webkit-scrollbar { display:none; }
+.readingSeries button { flex:none; border:0; border-radius:14px; padding:8px 11px; background:#fffaf0; color:#8a6a3a; font-weight:800; box-shadow:0 2px 7px rgba(120,90,45,.13); }
+.readingSeries button.on { color:#fff; background:linear-gradient(135deg,#84b66a,#d3a348); }
+.readingItem { cursor:pointer; border-left:5px solid #d8c28e; }
+.readingItem.done { border-left-color:#76ad5c; background:linear-gradient(135deg,#fffdf7,#eff9e9); }
+.readingMeta { display:flex; gap:5px; flex-wrap:wrap; margin-top:5px; }
+.readingMeta span { font-size:9px; color:#978163; background:#f4ead8; border-radius:8px; padding:3px 6px; }
+.readPara { font-size:16px; line-height:2; text-align:justify; letter-spacing:.02em; user-select:text; -webkit-user-select:text; }
+.readPara.reveal { animation:fadeIn .25s ease; }
+.readProgress { height:8px; border-radius:5px; background:#eee4d1; overflow:hidden; margin:8px 0 14px; }
+.readProgress i { display:block; height:100%; background:linear-gradient(90deg,#8fc273,#e0b052); border-radius:5px; transition:.25s; }
+.readingQuestion { font-size:16px; font-weight:800; line-height:1.65; color:#66502d; margin-bottom:10px; }
+.readOpt { width:100%; border:2px solid #eadcc3; border-radius:14px; padding:12px; margin:7px 0; background:#fffdf8; color:#5e503b; font-size:14px; text-align:left; }
+.readOpt.right { border-color:#70ad57; background:#edf8e7; color:#497b34; font-weight:800; }
+.readOpt.try { border-color:#e6bc72; background:#fff5df; }
+.evidenceBox { margin-top:10px; border-radius:13px; padding:10px 12px; background:#f0f7eb; color:#597345; font-size:12px; line-height:1.7; }
+.treasureChoice { border:2px solid #ead7a9; border-radius:14px; padding:11px; margin:8px 0; background:#fffdf7; color:#725a31; font-size:13px; line-height:1.65; text-align:left; }
+.treasureChoice.on { border-color:#d49a2e; background:#fff3cf; }
+.readingShelf { background:linear-gradient(145deg,#fff9e9,#f7edcf); }
 .nextPrize { display:flex; align-items:center; gap:10px; padding:12px 14px; border:2px solid #ead09a; background:linear-gradient(145deg,#fffdf7,#fff5dc); cursor:pointer; }
 .nextPrizeIcon { font-size:34px; }
 .nextPrize b { display:block; color:#7a5a2a; font-size:14px; }
@@ -379,6 +406,8 @@ body {
 
   <main id="screens">
     <section id="scr-home" class="screen"></section>
+    <section id="scr-reading" class="screen"></section>
+    <section id="scr-reader" class="screen"></section>
     <section id="scr-passport" class="screen"></section>
     <section id="scr-map" class="screen"></section>
     <section id="scr-stop" class="screen"></section>
@@ -404,9 +433,9 @@ body {
 
   <nav id="tabbar">
     <button class="tab on" data-tab="home"><span class="ti">🏕️</span><span class="tn">营地</span></button>
+    <button class="tab" data-tab="reading"><span class="ti">📖</span><span class="tn">阅读</span></button>
     <button class="tab" data-tab="map"><span class="ti">🗺️</span><span class="tn">寻宝</span></button>
     <button class="tab" data-tab="idea"><span class="ti">💡</span><span class="tn">脑洞</span></button>
-    <button class="tab" data-tab="tools"><span class="ti">🧰</span><span class="tn">法宝</span></button>
     <button class="tab" data-tab="gems"><span class="ti">💎</span><span class="tn">宝库</span></button>
   </nav>
 </div>

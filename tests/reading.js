@@ -1,0 +1,42 @@
+/* 阅读探险：原创内容 / 分段阅读 / 文本依据 / 原文与原创分离 / 奖励闭环 */
+const { JSDOM } = require("jsdom");
+const fs = require("fs"), path = require("path");
+const DIR = path.resolve(__dirname, "..");
+let pass=0,fail=0; const ok=(c,m)=>{c?pass++:fail++;console.log(`  ${c?"✓":"✗ FAIL"} ${m}`);};
+const dom=new JSDOM(fs.readFileSync(DIR+"/index.html","utf8").replace(/<script src="[^"]+"><\/script>/g,""),{runScripts:"dangerously",url:"https://nevergiveup0618.github.io/Chinese/",pretendToBeVisual:true});
+const w=dom.window;
+w.Audio=function(){return{play:()=>Promise.resolve(),pause(){}}};
+w.AudioContext=function(){return{state:"running",resume(){},currentTime:0,destination:{},createOscillator:()=>({frequency:{},connect(){},start(){},stop(){}}),createGain:()=>({connect(){},gain:{exponentialRampToValueAtTime(){}}})}};
+w.SpeechSynthesisUtterance=function(t){this.text=t}; w.speechSynthesis={cancel(){},speak(){},getVoices:()=>[]};
+for(const f of ["audio/baibai/manifest.js","data.js","check.js","app.js"]){const s=w.document.createElement("script");s.textContent=fs.readFileSync(DIR+"/"+f,"utf8");w.document.body.appendChild(s);}
+const $=s=>w.document.querySelector(s), $$=s=>[...w.document.querySelectorAll(s)], S=()=>w.eval("S");
+
+console.log("阅读探险完整闭环");
+ok(w.eval("READINGS.length")===8 && w.eval("READING_SERIES.length")===4,"8篇原创短文覆盖4个阅读系列");
+ok(w.eval("READINGS.every(r=>r.paras.length===4&&r.qs.length===3&&r.treasures.length===3)"),"每篇都有4段正文、3道依据题和3句原文宝物");
+ok($("[data-tab='reading']") && $("#goReading"),"底部导航和首页都有阅读入口");
+$("[data-tab='reading']").click();
+ok($("#scr-reading").classList.contains("on") && $$("[data-reading]").length===2,"进入阅读书架并按系列显示文章");
+$("[data-reading='lamp']").click();
+ok($("#scr-reader").classList.contains("on") && $(".readPara").textContent.includes("放学时"),"先只展示第一小段，不一次铺满全文");
+ok(!$("textarea") && w.document.activeElement.tagName!=="TEXTAREA","进入阅读时不显示输入框、不弹键盘");
+for(let i=0;i<4;i++) $("#readNext").click();
+ok($$(".readOpt").length===3,"读完全文才进入3选1找依据");
+$("[data-opt='1']").click();
+ok($("#readFeedback").textContent.includes("证据还没对上"),"选错不扣分，立即提醒回原文找证据");
+for(let q=0;q<3;q++) { $("[data-opt='0']").click(); ok($("#readFeedback").textContent.includes("找到依据"),`第${q+1}题答对后展示文本依据`); $("#readQNext").click(); }
+ok($$("[data-treasure]").length===3,"答完后由孩子自己挑一句原文宝物");
+$("[data-treasure='2']").click(); $("#saveTreasure").click();
+ok(S().readings.lamp.done && S().readingBook.length===1,"阅读完成记录和原文宝物已保存");
+ok(S().gems.length===0,"原文句子不冒充孩子原创，不进入作文宝库");
+ok(S().daily.readings===1 && w.eval("taskDone().t1")===true,"阅读可替代寻宝完成每日第一项，不增加任务压力");
+ok(JSON.parse(w.localStorage.getItem("sharedCardDaily_v1")).chinese===1,"首次完成阅读获得1张语文白白卡");
+$("#openImitate").click();
+ok(!!$("#readingImitate") && w.document.activeElement!==$("#readingImitate"),"点想仿写后才出现输入框，且不自动聚焦");
+$("#readingImitate").value="楼道的灯照不了整座城市，却刚好照亮我回家的最后一级台阶。"; $("#saveImitate").click();
+ok(S().gems.length===1 && S().gems[0].kind==="reading" && S().readings.lamp.imitated,"仿写的新句子作为孩子原创进入宝库");
+w.eval("renderReview('reading')");
+ok($("#scr-review").textContent.includes("阅读仿写") && $("#scr-review").textContent.includes("楼道的灯"),"家长后台可单独查看阅读仿写原文");
+w.eval("renderReport()");
+ok($("#scr-report").textContent.includes("阅读理解") && $("#scr-report").textContent.includes("1/8"),"家长学习报告展示阅读进度与依据题记录");
+console.log(`\n结果: ${pass} 通过, ${fail} 失败`); process.exit(fail?1:0);

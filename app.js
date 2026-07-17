@@ -28,11 +28,13 @@ const AI_DEVICE_TOKEN_KEY = "twAiDeviceToken_v1";
 function defState() {
   return {
     streak: 0, lastDay: "",
-    daily: { date: todayStr(), quests: 0, ideas: 0, gems: 0, bonus: false },
+    daily: { date: todayStr(), quests: 0, readings: 0, ideas: 0, gems: 0, bonus: false },
     stops: {},      // stopId -> {read:bool, done:[questIdx], stars:{questIdx:n}}
     tools: {},      // toolId -> {learned:bool, used:n, best:0}
     gems: [],       // 宝库：{txt, tool, from, d}
     remixes: [],    // 宝物变身记录：{from,tool,d,hit}，只记是否用了技巧，不评好坏
+    readings: {},   // readingId -> 阅读完成、答题和仿写记录
+    readingBook: [],// 从原创短文收下的原文句子，与孩子原创分开保存
     gear: { head: "", hand: "", back: "" }, // 白白的语文探险装备：只解锁，不磨损、不降级
     essays: {},     // essayId -> {paras:[], done:bool, score:0}
     aiReviews: {},  // AI 结果缓存（家长完整参考 + 孩子即时灵感；不含访问口令）
@@ -44,6 +46,9 @@ let S = defState();
 try { const raw = localStorage.getItem(LS_KEY); if (raw) S = Object.assign(defState(), JSON.parse(raw)); } catch (e) {}
 S.gear = Object.assign(defState().gear, S.gear || {});
 S.aiReviews = S.aiReviews || {};
+S.readings = S.readings || {};
+S.readingBook = Array.isArray(S.readingBook) ? S.readingBook : [];
+S.daily = Object.assign(defState().daily, S.daily || {});
 if (S.daily.date !== todayStr()) S.daily = defState().daily;
 function save() { try { localStorage.setItem(LS_KEY, JSON.stringify(S)); } catch (e) {} }
 function isAiGem(g) { return !!g && g.kind === "ai-example"; }
@@ -213,7 +218,7 @@ function coinFly(n) {
 let navStack = [];
 let navTabs = [];
 let activeTab = "home";
-const ROOT_TABS = { home: "home", map: "map", idea: "idea", tools: "tools", gems: "gems" };
+const ROOT_TABS = { home: "home", reading: "reading", map: "map", idea: "idea", gems: "gems" };
 function setActiveTab(tab) {
   if (!tab) return;
   activeTab = tab;
@@ -239,7 +244,7 @@ function goBack() {
 $("#backBtn").onclick = goBack;
 $$(".tab").forEach(t => {
   t.onclick = () => {
-    ({ home: () => goTab(renderHome, "home"), map: () => goTab(renderMap, "map"), idea: () => goTab(renderIdea, "idea"), tools: () => goTab(renderTools, "tools"), gems: () => goTab(renderGems, "gems") })[t.dataset.tab]();
+    ({ home: () => goTab(renderHome, "home"), reading: () => goTab(renderReading, "reading"), map: () => goTab(renderMap, "map"), idea: () => goTab(renderIdea, "idea"), gems: () => goTab(renderGems, "gems") })[t.dataset.tab]();
   };
 });
 
@@ -315,7 +320,7 @@ function updateWritingBuddy(host, n) {
 /* ---------------- 每日任务 ---------------- */
 function taskDone() {
   return {
-    t1: S.daily.quests >= 1,                 // 完成 1 个寻宝任务（微写作）
+    t1: S.daily.quests >= 1 || S.daily.readings >= 1, // 阅读或寻宝二选一
     t2: S.daily.ideas >= 1 || S.daily.quests >= 2,  // 写 1 个脑洞（或再做一个任务）
     t3: S.daily.gems >= 1                    // 往宝库里存 1 句好句子
   };
@@ -347,7 +352,7 @@ function renderHome() {
   const ownCount = ownGems().length, aiCount = S.gems.length - ownCount;
   const nextStop = STOPS.find((s, i) => stopUnlocked(i) && stopS(s.id).done.length < s.quests.length) || STOPS[0];
   const nextStamp = STOPS.find((s, i) => stopUnlocked(i) && !hasStamp(s.id));
-  const target = !d.t1 ? "再完成 1 个寻宝任务，就向今日盖章前进一步" : !d.t2 ? "再写 1 个脑洞，今天就快完成啦" : !d.t3 ? "再收进 1 句宝物，就能盖今日探险章" : "今日探险章已到手，转盘券已送到共享钱包";
+  const target = !d.t1 ? "读一篇短文或完成 1 个寻宝任务，任选一个" : !d.t2 ? "再写 1 个脑洞，今天就快完成啦" : !d.t3 ? "再收进 1 句原创宝物，就能盖今日探险章" : "今日探险章已到手，转盘券已送到共享钱包";
   const stampTarget = nextStamp ? `${nextStamp.icon} ${nextStamp.name}还差 ${2 - stopS(nextStamp.id).done.length} 题获得城市章` : "16 枚城市章已经全部收入护照！";
   $("#scr-home").innerHTML = `
     ${S.testMode ? `<div class="card" id="testBanner" style="background:#fff3d6;text-align:center;padding:10px;font-size:13px;font-weight:700;color:#c07a2c">🧪 测试模式开启中（全部城市已解锁）· 点我关闭</div>` : ""}
@@ -366,7 +371,7 @@ function renderHome() {
 
     <div class="sectionTitle">📋 今日探险（约 10 分钟）</div>
     <div class="card">
-      <div class="taskRow ${d.t1 ? "done" : ""}"><span class="tIcon">🔍</span><span class="tName">完成 1 个寻宝任务</span><span class="tProg">${Math.min(S.daily.quests, 1)}/1</span></div>
+      <div class="taskRow ${d.t1 ? "done" : ""}"><span class="tIcon">📖</span><span class="tName">阅读或寻宝，任选 1 次</span><span class="tProg">${d.t1 ? 1 : 0}/1</span></div>
       <div class="taskRow ${d.t2 ? "done" : ""}"><span class="tIcon">💡</span><span class="tName">写 1 个脑洞（随便写！）</span><span class="tProg">${Math.min(S.daily.ideas, 1)}/1</span></div>
       <div class="taskRow ${d.t3 ? "done" : ""}"><span class="tIcon">💎</span><span class="tName">往宝库存 1 句好句子</span><span class="tProg">${Math.min(S.daily.gems, 1)}/1</span></div>
     </div>
@@ -378,6 +383,7 @@ function renderHome() {
     <button class="btn" id="goNext">🗺️ 继续寻宝：${nextStop.icon} ${nextStop.name} →</button>
     <div style="height:12px"></div>
     <div class="homeGrid">
+      <div class="card" id="goReading"><div class="hIcon">📖</div><div class="hName">阅读探险</div><div class="hSub">读—找依据—收好句</div></div>
       <div class="card" id="goIdea"><div class="hIcon">💡</div><div class="hName">脑洞任务</div><div class="hSub">随便写，没有对错</div></div>
       <div class="card" id="goGems"><div class="hIcon">💎</div><div class="hName">我的宝库</div><div class="hSub">${ownCount} 件原创${aiCount ? ` · ${aiCount} 条 AI 灵感` : ""}</div></div>
       <div class="card" id="goTools"><div class="hIcon">🧰</div><div class="hName">六件法宝</div><div class="hSub">已学会 ${learned}/6</div></div>
@@ -397,6 +403,7 @@ function renderHome() {
     location.href = "https://nevergiveup0618.github.io/English/";
   };
   $("#goNext").onclick = () => go(() => renderStop(nextStop), "map");
+  $("#goReading").onclick = () => go(renderReading, "reading");
   $("#goIdea").onclick = () => go(renderIdea, "idea");
   $("#goGems").onclick = () => go(renderGems, "gems");
   $("#goTools").onclick = () => go(renderTools, "tools");
@@ -408,6 +415,95 @@ function renderHome() {
   };
   show("home", "🏕️ 探险营地");
   updateCoinBox();
+}
+
+/* ================= 阅读探险：读 → 找依据 → 收好句 → 自愿仿写 ================= */
+let readingSeries = "story";
+function readingS(id) {
+  if (!S.readings[id]) S.readings[id] = { done:false, answers:0, collected:"", imitated:false, date:"" };
+  return S.readings[id];
+}
+function renderReading() {
+  const done = READINGS.filter(r => readingS(r.id).done).length;
+  const imitated = READINGS.filter(r => readingS(r.id).imitated).length;
+  const visible = READINGS.filter(r => r.series === readingSeries);
+  $("#scr-reading").innerHTML = `
+    <div class="card readingHero">
+      <div style="display:flex;align-items:center;gap:12px">${buddyAvatar("",74)}<div><b style="font-size:18px;color:#627c4d">白白阅读探险队</b><div style="font-size:12px;color:#7c8d6c;line-height:1.6">不背答案。每道题都回到原文，找到证据再出发。</div></div></div>
+      <div class="readingStats"><span><b>${done}/${READINGS.length}</b>读完短文</span><span><b>${S.readingBook.length}</b>原文宝物</span><span><b>${imitated}</b>次仿写</span></div>
+    </div>
+    <div class="readingSeries">${READING_SERIES.map(x => `<button class="${readingSeries===x.id?'on':''}" data-series="${x.id}">${x.icon} ${x.name}</button>`).join("")}</div>
+    <div style="font-size:11px;color:#927e60;line-height:1.6;margin:0 3px 10px">${READING_SERIES.find(x=>x.id===readingSeries).sub} · 全部文章均为本站原创</div>
+    ${visible.map(r => { const s=readingS(r.id); return `<div class="card readingItem ${s.done?'done':''}" data-reading="${r.id}">
+      <div style="display:flex;align-items:center;gap:11px"><span style="font-size:34px">${r.icon}</span><div style="flex:1"><b style="font-size:15px;color:#6f572f">${r.title}</b><div class="readingMeta"><span>${r.level}</span><span>约${r.minutes}分钟</span><span>3道依据题</span></div></div><span style="font-size:18px;color:${s.done?'#6da253':'#c5a360'}">${s.done?'✓':'▶'}</span></div>
+    </div>`; }).join("")}
+    ${S.readingBook.length ? `<div class="sectionTitle">📜 我的原文宝物架</div><div class="card readingShelf">${S.readingBook.slice(0,6).map(x=>`<div style="padding:8px 2px;border-bottom:1px dashed #e1cfa7;font-size:12px;line-height:1.7;color:#705b39">“${esc(x.text)}”<small style="display:block;color:#a08b67">《${esc(x.title)}》</small></div>`).join("")}</div>`:""}`;
+  $$("#scr-reading [data-series]").forEach(b => b.onclick=()=>{readingSeries=b.dataset.series;renderReading();});
+  $$("#scr-reading [data-reading]").forEach(c => c.onclick=()=>{const r=READINGS.find(x=>x.id===c.dataset.reading);go(()=>startReading(r),"reading");});
+  show("reading","📖 阅读探险");
+}
+
+function startReading(r) {
+  let para=0, qi=0, chosen="";
+  const rec=readingS(r.id);
+  function drawParagraph() {
+    $("#scr-reader").innerHTML = `
+      ${buddyCompanion(para ? "这一段又给了新线索，慢慢读，我不催你。" : "先读一小段。读完点一下，我马上陪你找下一条线索。","thinking","readingBuddy")}
+      <div class="card"><div style="font-size:12px;color:#9a835f">${r.icon}《${r.title}》 · 第 ${para+1}/${r.paras.length} 段</div><div class="readProgress"><i style="width:${(para+1)/r.paras.length*100}%"></i></div><div class="readPara reveal">${esc(r.paras[para])}</div></div>
+      <button class="btn" id="readNext">${para+1<r.paras.length?'我读完这段了，继续 →':'全文读完，开始找线索 →'}</button>`;
+    bindBuddyCompanion("readingBuddy",["不用读得快，找到一句你觉得重要的就很厉害。","如果哪里没懂，等会儿的问题会带我们回来看。"]);
+    $("#readNext").onclick=()=>{sndSoft(); if (++para<r.paras.length) drawParagraph(); else drawQuestion();};
+    show("reader","📖 "+r.title);
+  }
+  function drawQuestion(feedback) {
+    const q=r.qs[qi];
+    $("#scr-reader").innerHTML = `${buddyCompanion("答案不藏在脑子里，它就藏在刚读过的文字里。","thinking","questionBuddy")}
+      <div class="card"><div style="font-size:11px;color:#9b845f;margin-bottom:6px">🔍 线索 ${qi+1}/${r.qs.length}</div><div class="readingQuestion">${esc(q.q)}</div>
+      ${q.o.map((x,i)=>`<button class="readOpt" data-opt="${i}">${String.fromCharCode(65+i)}. ${esc(x)}</button>`).join("")}
+      <div id="readFeedback">${feedback||""}</div></div>`;
+    bindBuddyCompanion("questionBuddy",["不确定也可以点，马上就知道该回哪一段找。","先找题目里的关键词，再回文章里找相同或相近的意思。"]);
+    $$("#scr-reader [data-opt]").forEach(b=>b.onclick=()=>{
+      if (+b.dataset.opt!==q.a) {
+        b.classList.add("try"); sndSoft();
+        $("#readFeedback").innerHTML=`<div class="evidenceBox" style="background:#fff5df;color:#8a6b37">白白：这个想法有可能，不过证据还没对上。再回想一下相关段落。</div>`;
+        return;
+      }
+      $$("#scr-reader [data-opt]").forEach(x=>x.disabled=true); b.classList.add("right"); sndGood(); confetti(5);
+      rec.answers=Math.max(rec.answers||0,qi+1); save();
+      $("#readFeedback").innerHTML=`<div class="evidenceBox"><b>✅ 找到依据了</b><br>${esc(q.e)}</div><button class="btn" id="readQNext" style="margin-top:10px">${qi+1<r.qs.length?'带着依据继续 →':'把一句宝物带走 →'}</button>`;
+      $("#readQNext").onclick=()=>{if(++qi<r.qs.length) drawQuestion(); else drawTreasure();};
+    });
+    show("reader","🔍 回原文找依据");
+  }
+  function drawTreasure() {
+    $("#scr-reader").innerHTML=`${buddyCompanion("没有标准的“最好一句”。挑你自己最想记住的，就是你的阅读眼光。","excited","treasureBuddy")}
+      <div class="card"><div class="sectionTitle" style="margin-top:0">📜 从原文收一句宝物</div><div style="font-size:12px;color:#917b5b;line-height:1.6;margin-bottom:8px">原文句子只放进阅读宝物架，不冒充你的原创。仿写的新句子才进入作文宝库。</div>
+      ${r.treasures.map((x,i)=>`<button class="treasureChoice" data-treasure="${i}">“${esc(x)}”</button>`).join("")}</div>
+      <button class="btn" id="saveTreasure" disabled>收好这句，完成阅读</button>`;
+    bindBuddyCompanion("treasureBuddy",["你选中的句子，以后写作文时还能回来看看。","喜欢画面、喜欢声音、喜欢它的意思，都算理由。"]);
+    $$("[data-treasure]").forEach(b=>b.onclick=()=>{chosen=r.treasures[+b.dataset.treasure];$$("[data-treasure]").forEach(x=>x.classList.toggle("on",x===b));$("#saveTreasure").disabled=false;sndSoft();});
+    $("#saveTreasure").onclick=()=>finishReading();
+    show("reader","📜 收一句原文宝物");
+  }
+  function finishReading() {
+    if (!S.readingBook.some(x=>x.readingId===r.id&&x.text===chosen)) S.readingBook.unshift({readingId:r.id,title:r.title,text:chosen,d:todayStr()});
+    rec.collected=chosen;
+    if (!rec.done) { rec.done=true; rec.date=todayStr(); bump("readings"); addCoins(10); grantChineseCard(); }
+    save(); sndWin(); confetti(10);
+    drawFinish();
+  }
+  function drawFinish(showWrite) {
+    $("#scr-reader").innerHTML=`<div class="card" style="text-align:center">${buddyAvatar("",92)}<div style="font-size:20px;font-weight:800;color:#6b8f50">阅读探险完成！</div><div style="font-size:12px;color:#8a795e;margin-top:5px">找到3条依据 · 原文宝物已收好${rec.done?' · 首次奖励已记录':''}</div></div>
+      <div class="card"><div class="sectionTitle" style="margin-top:0">✍️ 想试试作者的写法吗？</div><div style="font-size:13px;color:#725f42;line-height:1.75">${esc(r.imitate)}</div>${showWrite?`<textarea id="readingImitate" rows="4" placeholder="点击这里再开始写，不会自动弹出键盘"></textarea><div id="readingCount" style="font-size:11px;color:#a18b68;text-align:right">0 字</div><button class="btn" id="saveImitate" style="margin-top:8px">把我的新句子收进宝库</button>`:`<button class="btn ghost" id="openImitate" style="margin-top:10px">我想仿写一句</button>`}</div>
+      <button class="btn ghost" id="backReading">先回阅读书架</button>`;
+    if (showWrite) {
+      const ta=$("#readingImitate"); ta.oninput=()=>$("#readingCount").textContent=[...ta.value.trim()].length+" 字";
+      $("#saveImitate").onclick=()=>{const txt=ta.value.trim();if([...txt].length<8){toast("已经开头啦，再写到8个字就能收进宝库");return;}if(!rec.imitated){S.gems.unshift({txt,from:"阅读仿写·"+r.title,d:todayStr(),kind:"reading",prompt:r.imitate,sourceTxt:chosen});rec.imitated=true;S.daily.gems++;checkTasks();addCoins(5);save();}sndWin();confetti(8);toast("💎 这是你自己的新句子，已收进作文宝库！",2600);drawFinish(false);};
+    } else $("#openImitate").onclick=()=>drawFinish(true);
+    $("#backReading").onclick=()=>{navStack=[renderReading];navTabs=["reading"];renderReading();};
+    show("reader","🎉 阅读完成");
+  }
+  drawParagraph();
 }
 
 /* ================= 探险护照：打卡、城市章、路线勋章、装备 ================= */
@@ -1111,7 +1207,7 @@ function renderParent() {
     <div class="card actRow" id="pReview">
       <span style="font-size:26px">🗂️</span>
       <span style="flex:1;font-size:15px;font-weight:800;color:#7a5a2a">孩子作品与批阅
-        <span style="display:block;font-size:12px;color:#b0997a;font-weight:400">作文、寻宝练笔、脑洞和宝物变身集中查看</span>
+        <span style="display:block;font-size:12px;color:#b0997a;font-weight:400">作文、阅读仿写、寻宝练笔和脑洞集中查看</span>
       </span>
       ${pending ? `<span style="background:#e8842d;color:#fff;border-radius:10px;padding:2px 8px;font-size:12px;font-weight:700">${pending}</span>` : `<span style="font-size:20px;color:#d9a441">▶</span>`}
     </div>
@@ -1119,7 +1215,7 @@ function renderParent() {
     <div class="card actRow" id="pReport">
       <span style="font-size:26px">📊</span>
       <span style="flex:1;font-size:15px;font-weight:800;color:#7a5a2a">学习报告
-        <span style="display:block;font-size:12px;color:#b0997a;font-weight:400">五大题材 · 六件法宝 · 7天趋势</span>
+        <span style="display:block;font-size:12px;color:#b0997a;font-weight:400">阅读理解 · 五大题材 · 六件法宝 · 7天趋势</span>
       </span><span style="font-size:20px;color:#d9a441">▶</span>
     </div>
 
@@ -1260,11 +1356,12 @@ function gemKind(g) {
   if (String(g.from || "").startsWith("宝物变身")) return "remix";
   return "quest";
 }
-function gemKindName(k) { return ({ quest: "寻宝练笔", idea: "脑洞", remix: "宝物变身" })[k] || "日常练笔"; }
+function gemKindName(k) { return ({ quest: "寻宝练笔", idea: "脑洞", remix: "宝物变身", reading: "阅读仿写" })[k] || "日常练笔"; }
 function oldGemPrompt(g, k) {
   if (g.prompt) return g.prompt;
   if (k === "idea") return "脑洞题（早期记录未保存原题）";
   if (k === "remix") return "把旧句换一种写法（早期记录未保存原句）";
+  if (k === "reading") return "读完短文后，模仿作者的一种表达方法";
   const t = TOOLS.find(x => x.id === g.tool);
   return `${g.from || "城市"}练笔 · ${t ? "练习「" + t.short + "」" : "原题未保存"}`;
 }
@@ -1535,7 +1632,7 @@ function renderReview(filter = "all") {
   const tabs = [
     ["all", "全部", written.length + gems.length], ["pending", "待批作文", pending.length],
     ["essay", "作文", written.length], ["quest", "寻宝练笔", gems.filter(x => x.k === "quest").length],
-    ["idea", "脑洞", gems.filter(x => x.k === "idea").length], ["remix", "宝物变身", gems.filter(x => x.k === "remix").length]
+    ["reading", "阅读仿写", gems.filter(x => x.k === "reading").length], ["idea", "脑洞", gems.filter(x => x.k === "idea").length], ["remix", "宝物变身", gems.filter(x => x.k === "remix").length]
   ];
   $("#scr-review").innerHTML = `
     <div class="card" style="padding:12px;font-size:12.5px;color:#6a5a42;line-height:1.8">
@@ -1678,6 +1775,11 @@ function renderReport() {
   const maxN = Math.max(3, ...days.map(d => d.n));
   const remixes = S.remixes || [], remixHits = remixes.filter(x => x.hit).length;
   $("#scr-report").innerHTML = `
+    <div class="card">
+      <div class="sectionTitle" style="margin:0 0 8px">📖 阅读理解</div>
+      <div style="font-size:13px;color:#6a5a42;line-height:1.9">完成原创短文 <b>${READINGS.filter(r=>readingS(r.id).done).length}/${READINGS.length}</b> 篇 · 回原文找依据 <b>${READINGS.reduce((n,r)=>n+(readingS(r.id).answers||0),0)}</b> 次 · 阅读仿写 <b>${READINGS.filter(r=>readingS(r.id).imitated).length}</b> 次</div>
+      <div style="font-size:11px;color:#b0997a;margin-top:4px">阅读题只记录是否找到了文本依据，不按速度排名，也不评价孩子读得“好不好”。</div>
+    </div>
     <div class="card">
       <div class="sectionTitle" style="margin:0 0 8px">📚 五大题材（小学作文就考这几类）</div>
       ${GENRES.map(([g, n]) => {
