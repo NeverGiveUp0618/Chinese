@@ -121,6 +121,16 @@ function sndSoft() { tone(520, .12, "sine", 0, .08); }
    只在孩子点击或完成动作后开口，不在输入过程中打断。 */
 let zhBuddyVoice = null;
 let baibaiAudio = null;
+const baibaiAudioPool = {};
+function preloadBaibaiAudio() {
+  if (typeof BAIBAI_AUDIO === "undefined" || !window.Audio) return;
+  [...new Set(Object.values(BAIBAI_AUDIO))].forEach(src => {
+    try {
+      const a = new Audio(); a.preload = "auto"; a.src = src;
+      if (a.load) a.load(); baibaiAudioPool[src] = a;
+    } catch (e) {}
+  });
+}
 function chooseBuddyVoice() {
   if (!window.speechSynthesis) return null;
   const voices = speechSynthesis.getVoices ? speechSynthesis.getVoices() : [];
@@ -137,7 +147,8 @@ function baibaiSpeak(text) {
     try {
       if (baibaiAudio) { baibaiAudio.pause(); baibaiAudio.currentTime = 0; }
       if (window.speechSynthesis) speechSynthesis.cancel();
-      baibaiAudio = new Audio(BAIBAI_AUDIO[clean]); baibaiAudio.volume = .92;
+      const src = BAIBAI_AUDIO[clean];
+      baibaiAudio = baibaiAudioPool[src] || new Audio(src); baibaiAudio.volume = .92; baibaiAudio.currentTime = 0;
       const p = baibaiAudio.play(); if (p && p.catch) p.catch(() => {});
       return;
     } catch (e) {}
@@ -151,6 +162,7 @@ function baibaiSpeak(text) {
     speechSynthesis.speak(u);
   } catch (e) {}
 }
+preloadBaibaiAudio();
 chooseBuddyVoice();
 if (window.speechSynthesis && "onvoiceschanged" in speechSynthesis) speechSynthesis.onvoiceschanged = chooseBuddyVoice;
 

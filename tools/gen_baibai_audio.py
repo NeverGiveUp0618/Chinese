@@ -30,9 +30,9 @@ async def main():
     name = filename(text); manifest[text] = "audio/baibai/" + name
     target = OUT / name
     print(f"[{i}/{len(LINES)}] {text}")
-    # 轻微升调 + 略慢：奶声奶气但不尖、不像变声器。
-    await edge_tts.Communicate(text, VOICE, rate="-5%", pitch="+6Hz", volume="-2%").save(str(target))
-  (OUT / "manifest.js").write_text("globalThis.BAIBAI_VOICE = \"zh-CN-XiaoyiNeural · Cartoon · Lively\";\nglobalThis.BAIBAI_AUDIO = " + json.dumps(manifest, ensure_ascii=False, indent=2) + ";\n", encoding="utf-8")
+    # 明显幼化但不做尖锐变声：软、圆、略慢，像动漫小狗伙伴。
+    await edge_tts.Communicate(text, VOICE, rate="-8%", pitch="+18Hz", volume="-2%").save(str(target))
+  (OUT / "manifest.js").write_text("globalThis.BAIBAI_VOICE = \"zh-CN-XiaoyiNeural · Cartoon · Lively · Milk +18Hz -8%\";\nglobalThis.BAIBAI_AUDIO = " + json.dumps(manifest, ensure_ascii=False, indent=2) + ";\n", encoding="utf-8")
   print(f"Generated {len(manifest)} lines with {VOICE}")
 
 asyncio.run(main())

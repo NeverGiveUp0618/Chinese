@@ -1,4 +1,4 @@
-globalThis.BAIBAI_VOICE = "zh-CN-XiaoyiNeural · Cartoon · Lively";
+globalThis.BAIBAI_VOICE = "zh-CN-XiaoyiNeural · Cartoon · Lively · Milk +18Hz -8%";
 globalThis.BAIBAI_AUDIO = {
   "这句我要收进我们的寻宝本里！": "audio/baibai/993bb060f93b.mp3",
   "哇，画面一下就出来了！": "audio/baibai/0bef0e949210.mp3",
