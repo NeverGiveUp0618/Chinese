@@ -1,5 +1,5 @@
 importScripts("./audio/baibai/manifest.js");
-const CACHE = "treasure-writing-v29";
+const CACHE = "treasure-writing-v30";
 const FILES = ["./", "./index.html", "./data.js", "./check.js", "./app.js", "./manifest.json", "./audio/baibai/manifest.js", "./assets/baibai-base.png", ...Object.values(BAIBAI_AUDIO)];
 self.addEventListener("install", e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES)).then(() => self.skipWaiting())); });
 self.addEventListener("activate", e => { e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== CACHE).map(k => caches.delete(k)))).then(() => self.clients.claim())); });

@@ -140,6 +140,9 @@ const S = () => w.eval("S");
   ok($("#scr-report").innerHTML.includes("六件法宝"), "有法宝掌握情况");
   ok($("#scr-report").innerHTML.includes("探险成长") && $("#scr-report").innerHTML.includes("不设断签惩罚"), "★ 家长能看到累计成长，断签不清零");
   ok($("#scr-report").innerHTML.includes("最近 7 天"), "有7天趋势");
+  ok($("#scr-report").innerHTML.includes("有效学习时长") && $("#scr-report").innerHTML.includes("本周三个模块"), "★ 家长可看阅读/写作训练/完整作文的每日与每周时长");
+  ok($("#scr-report").innerHTML.includes("每日学习档案") && $("#scr-report").innerHTML.includes("本周学习档案"), "★ 家长可查看每日学习档案和每周学习档案");
+  ok(!!$("#makeWeekImage") && typeof w.eval("growthReportImage") === "function", "★ 家长可生成周报长图，长按保存或转发微信");
   ok($("#scr-report").innerHTML.includes("迁移练习") && $("#scr-report").innerHTML.includes("不评价改写得好不好"), "★ 报告统计迁移次数，但不评价改写好坏");
   ok($("#scr-report").innerHTML.includes("别急着补短板"), "★ 给家长的解读建议");
 

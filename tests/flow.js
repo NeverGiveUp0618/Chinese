@@ -39,6 +39,10 @@ const ok = (c, m) => { c ? pass++ : fail++; console.log(`  ${c ? "✓" : "✗ FA
   $("#backBtn").click();
   ok($("#scr-home").classList.contains("on") && $$(".tab").find(t => t.dataset.tab === "home").classList.contains("on"), "★ 页内返回回到营地并恢复营地高亮");
   ok($("#scr-home").innerHTML.includes("今日探险"), "今日探险任务卡");
+  ok($("#scr-home").textContent.includes("约 15 分钟") && !!$("#dailyMain"), "★ 今日探险是可点击的约15分钟交替路线");
+  $("#dailyMain").click();
+  ok($(w.eval("dailyPlan().reading ? '#scr-reading' : '#scr-stop'")).classList.contains("on"), "★ 点今日任务直接跳到当天对应模块");
+  w.eval("navStack=[renderHome];renderHome()");
   ok($$(".tab").length === 5 && !!$("[data-tab='reading']"), "5个导航（营地/阅读/寻宝/脑洞/宝库）");
 
   console.log("— 寻宝地图 —");
@@ -100,7 +104,7 @@ const ok = (c, m) => { c ? pass++ : fail++; console.log(`  ${c ? "✓" : "✗ FA
   ok(jb.includes("🎯"), "给出具体提示");
   ok(jb.includes("很美"), "指出空洞词");
   ok(jb.includes("看看别人怎么写"), "★ 给范例对照（不是骂她）");
-  ok(!!$("#jSkip"), "★ 就算没用上技巧，也能收进宝库（绝不强迫）");
+  ok(!!$("#jSkip") && $("#jSkip").textContent.includes("不进宝库"), "★ 没用上技巧也能完成练习，不强迫收入宝库");
   $("#jAgain").click();
   ok(w.document.activeElement !== $("#writeArea"), "★ 点「再加一句」也不抢光标，等孩子自己点输入位置");
 
@@ -125,7 +129,7 @@ const ok = (c, m) => { c ? pass++ : fail++; console.log(`  ${c ? "✓" : "✗ FA
   jb = $("#judgeBox").innerHTML;
   ok(jb.includes("⭐⭐⭐"), "★ 用上比喻且够长 → 3 星");
   ok(jb.includes("比喻词"), "告诉她检测到了什么");
-  ok(!!$("#jSave"), "可以收进宝库");
+  ok(!!$("#jSave") && !!$("#jArchive"), "写完可自己决定收藏进宝库或只存学习档案");
   ok(childAiRequest.body.reviewToken === "review-secret" && childAiRequest.body.type === "quest", "★ 点「让白白看看」会用家长授权直接请求 AI 即时灵感");
   ok($$("#childAiLive .childAiExample").length === 3 && $("#childAiLive").textContent.includes("再补一种山的颜色"), "★ 同一张白白反馈卡立即展示一个建议和三条例句");
   ok(!$("#childAiLive").textContent.includes("疑似空泛") && !$("#childAiLive").textContent.includes("只给家长"), "★ 孩子即时反馈不会泄露疑似问题或家长草稿");
@@ -193,6 +197,10 @@ const ok = (c, m) => { c ? pass++ : fail++; console.log(`  ${c ? "✓" : "✗ FA
   ok($("#scr-gems").classList.contains("on"), "宝库显示");
   ok($$(".gem").length === 2, "2 件宝物");
   ok($("#scr-gems").innerHTML.includes("你自己写的"), "★ 强调「这些都是你自己写的」");
+  $(".gemUnkeep").click();
+  ok($$(".gem").length === 1 && !!$(".archiveKeep"), "★ 已收藏句子可移回练习档案，完成记录不丢");
+  $(".archiveKeep").click();
+  ok($$(".gem").length === 2, "★ 档案里的句子可由孩子自己重新收藏");
 
   console.log("— 🔄 宝物变身（把旧句迁移成新技巧）—");
   ok(!!$("#goRemix"), "★ 宝库有素材后出现变身挑战");
