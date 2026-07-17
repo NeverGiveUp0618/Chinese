@@ -117,6 +117,32 @@ function sndCoin() { tone(988, .1, "square", 0, .05); tone(1319, .18, "square", 
 function sndWin() { [523, 659, 784, 1047].forEach((f, i) => tone(f, .22, "sine", i * .12)); }
 function sndSoft() { tone(520, .12, "sine", 0, .08); }
 
+/* 白白说汉语：优先使用设备里的中文童声；没有童声时用轻快高音调模拟小奶狗。
+   只在孩子点击或完成动作后开口，不在输入过程中打断。 */
+let zhBuddyVoice = null;
+function chooseBuddyVoice() {
+  if (!window.speechSynthesis) return null;
+  const voices = speechSynthesis.getVoices ? speechSynthesis.getVoices() : [];
+  const zh = voices.filter(v => /^zh/i.test(v.lang || "") || /Chinese|中文|普通话|Mandarin/i.test(v.name || ""));
+  zhBuddyVoice = zh.find(v => /xiaoxiao|xiaoyi|yunxia|tingting|meijia|hanhan|child|kid|童|晓|小艺|婷婷/i.test(v.name || ""))
+    || zh.find(v => /female|女|xia|ting|mei|hui|yao|晓|婷|美|慧|瑶/i.test(v.name || "")) || zh[0] || null;
+  return zhBuddyVoice;
+}
+function baibaiSpeak(text) {
+  if (!window.speechSynthesis || !window.SpeechSynthesisUtterance || !text) return;
+  const clean = String(text).replace(/^白白[：:]?\s*/, "").replace(/[“”「」]/g, "").trim();
+  if (!clean) return;
+  try {
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(clean);
+    u.lang = "zh-CN"; u.rate = 1.08; u.pitch = 1.55; u.volume = .92;
+    u.voice = zhBuddyVoice || chooseBuddyVoice();
+    speechSynthesis.speak(u);
+  } catch (e) {}
+}
+chooseBuddyVoice();
+if (window.speechSynthesis && "onvoiceschanged" in speechSynthesis) speechSynthesis.onvoiceschanged = chooseBuddyVoice;
+
 /* ---------------- 反馈 ---------------- */
 let toastT = null;
 function toast(msg, ms) {
@@ -216,6 +242,34 @@ function buddyAvatar(id, size, withGear) {
   return `<span class="buddyAvatar" ${id ? `id="${id}"` : ""} style="width:${sz}px;height:${sz}px">${showGear && back ? `<span class="buddyGear back">${back.icon}</span>` : ""}${sharedPetLayers(sz, true)}<img class="buddyBodyImg" src="assets/baibai-base.png" alt="白白">${sharedPetLayers(sz, false)}${showGear && head ? `<span class="buddyGear head">${head.icon}</span>` : ""}${showGear && hand ? `<span class="buddyGear hand">${hand.icon}</span>` : ""}</span>`;
 }
 function buddyMark(size) { return buddyAvatar("", size || 42, false); }
+function buddyCompanion(text, mood, id) {
+  return `<div class="card buddyCompanion ${mood || ""}"${id ? ` id="${id}"` : ""}>
+    ${buddyAvatar("", 58)}<div class="buddyTalk"><b>白白陪你一起</b><small>${esc(text)}</small></div><span class="buddyTap">点我 🐾</span>
+  </div>`;
+}
+function bindBuddyCompanion(id, lines) {
+  const el = $("#" + id); if (!el) return;
+  el.onclick = () => {
+    const small = el.querySelector("small"), avatar = el.querySelector(".buddyAvatar");
+    const line = pick(lines); if (small) small.textContent = line;
+    if (avatar) { avatar.classList.remove("bounce"); void avatar.offsetWidth; avatar.classList.add("bounce"); }
+    sndSoft(); baibaiSpeak(line);
+  };
+}
+function writingBuddyLine(n) {
+  if (!n) return "我趴在旁边等你。想到第一个词，再点输入框就好。";
+  if (n < 8) return "开头已经出现啦，我听着呢，再说一点点。";
+  if (n < 20) return "我脑子里开始有画面了，继续继续！";
+  if (n < 40) return "这件宝物越来越完整了，我帮你看着字数。";
+  return "写了这么多！先把想说的说完，再一起检查法宝。";
+}
+function updateWritingBuddy(host, n) {
+  const box = $(host); if (!box) return;
+  const small = box.querySelector("small");
+  if (small && small.textContent !== writingBuddyLine(n)) {
+    small.textContent = writingBuddyLine(n); box.classList.remove("changed"); void box.offsetWidth; box.classList.add("changed");
+  }
+}
 
 /* ---------------- 每日任务 ---------------- */
 function taskDone() {
@@ -292,8 +346,9 @@ function renderHome() {
 
   $("#buddyE").onclick = () => {
     const e = $("#buddyE"); e.classList.remove("bounce"); void e.offsetWidth; e.classList.add("bounce");
-    $("#buddySay").textContent = pick(BUDDY.praise.concat(BUDDY.push));
-    sndSoft();
+    const line = pick(BUDDY.praise.concat(BUDDY.push));
+    $("#buddySay").textContent = line;
+    sndSoft(); baibaiSpeak(line);
   };
   $("#goEnglishWardrobe").onclick = ev => {
     ev.stopPropagation();
@@ -373,6 +428,7 @@ function routeMapBackdrop(route) {
 
 /* ================= 寻宝地图 ================= */
 function renderMap() {
+  const scout = STOPS.find((s, i) => stopUnlocked(i) && stopS(s.id).done.length < s.quests.length) || STOPS[0];
   $("#scr-map").innerHTML = `
     <div class="card" style="text-align:center;padding:12px">
       <div style="font-size:15px;font-weight:800;color:#8a6a2a">🧭 中华寻宝 · 卡通探险路线</div>
@@ -389,6 +445,7 @@ function renderMap() {
       const st = stopS(s.id), open = stopUnlocked(i);
       const n = st.done.length, tot = s.quests.length;
       return `<div class="routeStop comicStop ${route.id}Stop step-${ri} ${ri % 2 ? "right" : "left"} ${open ? "" : "locked"} ${n === tot ? "done" : ""}">
+        ${s.id === scout.id ? `<span class="buddyMapPin">${buddyMark(38)}</span>` : ""}
         <span class="routeDot"></span>
         <div class="card stopCard ${open ? "" : "locked"}" data-i="${i}">
           <div class="stopIcon">${open ? s.icon : "🔒"}</div>
@@ -422,6 +479,7 @@ function renderStop(stop) {
       <div style="font-size:13px;color:#b0997a">${stop.region}</div>
       <div style="font-size:13px;color:#6a5a42;margin-top:8px;background:#f7ecd5;border-radius:12px;padding:8px 10px;line-height:1.6;display:flex;align-items:center;gap:8px">${buddyMark(38)} <span>${esc(stop.intro)}</span></div>
     </div>
+    ${buddyCompanion(stopS(stop.id).read ? "线索已经在我们的背包里了。你挑一个最想写的任务吧！" : "我先陪你翻线索卡，找到能写进句子里的秘密。", "excited", "stopBuddy")}
 
     <div class="card toolCard" id="readCards">
       <span class="toolIcon">📚</span>
@@ -449,6 +507,7 @@ function renderStop(stop) {
   $$("#scr-stop [data-q]").forEach(c => {
     c.onclick = () => go(() => renderWrite(stop, +c.dataset.q));
   });
+  bindBuddyCompanion("stopBuddy", ["你选哪一题，我就陪你写哪一题。", "不会也没关系，我们先写第一句话。", "线索忘了，随时回去再翻一遍。"]);
   show("stop", stop.name);
 }
 
@@ -504,15 +563,16 @@ function renderCards(stop) {
         $$("#scr-cards .clueOpt").forEach(x => { if (opts[+x.dataset.i] === answer) x.classList.add("right"); });
         toast("没关系，亮起来的那句就是线索～", 1400);
       }
+      baibaiSpeak(picked === answer ? "找到了！这就是关键线索。" : "没关系，亮起来的那句就是线索。");
       setTimeout(() => { ci++; cover(); }, 900);
     });
   }
   function finish() {
     st.read = true; save(); sndWin();
     shell(`<div class="card" style="text-align:center;padding:24px 16px">
-      <div style="font-size:56px">🎒✨</div>
+      ${buddyAvatar("", 108)}
       <div style="font-size:19px;font-weight:800;color:#6a9a4a">4 条线索装进背包啦！</div>
-      <div style="font-size:13px;color:#6a5a42;margin:7px 0 16px">你找对了 ${hits}/${stop.cards.length} 条。写的时候想不起来，随时回来翻卡。</div>
+      <div style="font-size:13px;color:#6a5a42;margin:7px 0 16px">白白和你一起找对了 ${hits}/${stop.cards.length} 条。写的时候想不起来，我们随时回来翻卡。</div>
       <button class="btn" id="cardsGo">🔍 带着线索去写</button>
       <div style="height:8px"></div><button class="btn ghost" id="cardsAgain">再翻一遍 🔁</button>
     </div>`);
@@ -535,6 +595,7 @@ function renderWrite(stop, qi) {
       <div class="questTool">${tool.icon} ${tool.name}</div>
       <div class="questAsk">${q.ask}</div>
     </div>
+    ${buddyCompanion(writingBuddyLine(0), "thinking", "writingBuddy")}
     ${!ts.learned ? `<div class="card" style="padding:12px">
       <div style="font-size:13px;color:#8a6a2a;font-weight:700;margin-bottom:6px">🧰 先看看怎么用这件法宝</div>
       <div style="font-size:13.5px;line-height:1.8;color:#5a4a34">${tool.teach}</div>
@@ -550,7 +611,9 @@ function renderWrite(stop, qi) {
   ta.oninput = () => {
     const n = [...ta.value.trim()].length;
     $("#wCount").textContent = n + " 字";
+    updateWritingBuddy("#writingBuddy", n);
   };
+  bindBuddyCompanion("writingBuddy", ["你说，我听着呢。", "先写脑子里最先跳出来的那句话。", "不用一次写完，我们一句一句来。"]);
 
   $("#wGo").onclick = () => {
     const text = ta.value.trim();
@@ -598,6 +661,7 @@ function renderJudge(r, text, tool, q, stop, qi) {
     </div>`;
 
   if (r.hit) { sndGood(); if (r.stars === 3) confetti(12); } else sndSoft();
+  baibaiSpeak(say);
 
   requestChildAiIdeas({
     kind: "quest", id: `${stop.id}-${qi}`, title: `${stop.name}寻宝练笔`,
@@ -633,10 +697,12 @@ function renderJudge(r, text, tool, q, stop, qi) {
 }
 
 function renderDone(r, tool, stop, newStamp, newMedal) {
+  const doneSay = r.hit ? pick(BUDDY.praise) : pick(BUDDY.push);
   $("#scr-done").innerHTML = `
     <div id="doneStars">${"⭐".repeat(r.stars) || "💪"}</div>
     <div id="doneTitle">${r.hit ? "宝物到手！" : "写出来就是胜利！"}</div>
-    <div id="doneMsg">${buddyMark(46)} 「${esc(r.hit ? pick(BUDDY.praise) : pick(BUDDY.push))}」<br>
+    <div class="doneBuddyHero">${buddyAvatar("", 128)}</div>
+    <div id="doneMsg">白白：「${esc(doneSay)}」<br>
       这句已经存进你的<b>宝库</b>，写作文的时候可以直接拿来用。
       ${newStamp ? `<div class="newAward">${stop.icon} ${stop.name}城市纪念章到手！</div>` : ""}
       ${newMedal ? `<div class="newAward">🏅 ${routeOf(stop.id).name}勋章集齐！</div>` : ""}</div>
@@ -645,6 +711,7 @@ function renderDone(r, tool, stop, newStamp, newMedal) {
     <div style="height:10px"></div>
     <button class="btn ghost" id="dGems">💎 看看我的宝库</button>`;
   if (newStamp || newMedal) { confetti(20); sndWin(); }
+  baibaiSpeak(doneSay);
   $("#dNext").onclick = () => { navStack = [() => renderStop(stop)]; renderStop(stop); };
   $("#dGems").onclick = () => go(renderGems);
   show("done", "🎉 收获");
@@ -659,22 +726,26 @@ function renderIdea() {
       <div style="font-size:16px;font-weight:800;color:#7a5a2a;line-height:1.6;margin-top:6px">${esc(idea.q)}</div>
       <div style="font-size:12px;color:#b0997a;margin-top:6px">随便写！<b>没有对错，没人给你挑毛病。</b></div>
     </div>
+    ${buddyCompanion("这个脑洞归你管！我只负责听，不挑毛病。", "excited", "ideaBuddy")}
     <button class="btn" id="iStart">✏️ 想到什么就写什么</button>
     <div style="height:8px"></div>
     <button class="btn ghost" id="iSwap">🔄 换一个脑洞</button>
     <div id="ideaEditor"></div>`;
   $("#iSwap").onclick = () => renderIdea();
+  bindBuddyCompanion("ideaBuddy", ["越奇怪越有意思，我准备好听啦！", "没有标准答案，你想到什么都算。", "你负责开脑洞，我负责守住宝箱。"]);
   $("#iStart").onclick = () => {
     $("#iStart").remove();
     $("#iSwap").remove();
     $("#ideaEditor").innerHTML = `
       <div id="micTip">💡 懒得打字就用键盘的<b>麦克风</b>说出来，说完自动变文字。</div>
       <textarea id="writeArea" placeholder="想到什么就写什么……"></textarea>
+      ${buddyCompanion(writingBuddyLine(0), "thinking", "ideaWritingBuddy")}
       <div id="writeMeta"><span id="wCount">0 字</span><button class="btn ghost small" id="iSwap">🔄 换一个题目</button></div>
       <button class="btn" id="iGo">${buddyMark(28)} 写完啦</button>
       <div style="height:12px"></div><div id="judgeBox"></div>`;
     const ta = $("#scr-idea #writeArea");
-    ta.oninput = () => { $("#scr-idea #wCount").textContent = [...ta.value.trim()].length + " 字"; };
+    ta.oninput = () => { const n = [...ta.value.trim()].length; $("#scr-idea #wCount").textContent = n + " 字"; updateWritingBuddy("#ideaWritingBuddy", n); };
+    bindBuddyCompanion("ideaWritingBuddy", ["这个想法有点意思，接着说！", "我不会打断你，先把脑洞倒出来。", "再来一句，我们的宝物就更完整啦。"]);
     $("#scr-idea #iSwap").onclick = () => renderIdea();
     $("#scr-idea #iGo").onclick = () => {
       const text = ta.value.trim();
@@ -682,7 +753,7 @@ function renderIdea() {
       if (r.tooShort) {
         $("#scr-idea #judgeBox").innerHTML = `<div class="jCard"><div class="jTop"><span class="jBuddy">${buddyMark(44)}</span>
           <div><div class="jTitle">${r.title}</div><div style="font-size:13px;color:#8a7a5a">${r.msg}</div></div></div></div>`;
-        sndSoft(); return;
+        sndSoft(); baibaiSpeak(r.msg); return;
       }
       $("#scr-idea #judgeBox").innerHTML = `
         <div class="jCard">
@@ -695,6 +766,7 @@ function renderIdea() {
           <button class="btn" id="iSave">💎 收进宝库</button>
         </div>`;
       sndGood(); if (r.stars === 3) confetti(12);
+      baibaiSpeak("这个脑洞真有意思！敢写，就是最大的本事。");
       $("#scr-idea #iSave").onclick = () => {
         S.gems.unshift({
           txt: text, tool: "idea", from: "脑洞", d: todayStr(), stars: r.stars,
@@ -753,6 +825,7 @@ function renderGems() {
       <div style="font-size:15px;font-weight:800;color:#8a6a2a">💎 我的宝库（${ownCount} 件原创${aiCount ? ` · ${aiCount} 条灵感` : ""}）</div>
       <div style="font-size:12px;color:#b0997a;margin-top:2px">原创宝物是<b>你自己写的</b>；AI 参考会单独标出来，拿灵感后记得换成自己的说法。</div>
     </div>
+    ${buddyCompanion(ownCount ? `我们已经一起找到 ${ownCount} 件原创宝物，每一句都有来历。` : "我们的宝库还空着，第一件宝物就从一句话开始。", "excited", "gemsBuddy")}
     ${ownCount ? `<div class="card remixCall" id="goRemix">
       <span style="font-size:34px">🔄</span><span style="flex:1"><b>宝物变身挑战</b><small>选一句自己写的，换一种法宝再写一次</small></span><span>▶</span>
     </div>` : ""}
@@ -767,6 +840,7 @@ function renderGems() {
       </div>`;
     }).join("") : `<div class="card" style="text-align:center;color:#b0997a;font-size:14px;padding:26px">宝库还是空的<br>去寻宝地图写一句，就有第一件宝物了 💎</div>`}`;
   if ($("#goRemix")) $("#goRemix").onclick = () => go(renderRemix);
+  bindBuddyCompanion("gemsBuddy", ["这些都是你写出来的，我一件都没忘。", "挑一句去变身，旧宝物也会好好留着。", "以后写作文，我们就来这里搬宝物。"]);
   show("gems", "💎 我的宝库");
 }
 
@@ -833,6 +907,7 @@ function renderEssayList() {
       <div style="font-size:15px;font-weight:800;color:#8a6a2a">✍️ 周末作文</div>
       <div style="font-size:12px;color:#b0997a;margin-top:2px">一段一段来，每段只回答一个问题——<b>流水账就是这样治好的</b>。</div>
     </div>
+    ${buddyCompanion("不用一口气写完。我陪你一段一段拼成完整作文。", "thinking", "essayBuddy")}
     ${ESSAYS.map((e, i) => {
       const es = S.essays[e.id];
       const n = es ? (es.paras || []).filter(x => x && x.trim()).length : 0;
@@ -844,6 +919,7 @@ function renderEssayList() {
       </div>`;
     }).join("")}`;
   $$("#scr-essay .toolCard").forEach(c => c.onclick = () => go(() => renderEssayWrite(ESSAYS[+c.dataset.i])));
+  bindBuddyCompanion("essayBuddy", ["先选一个最有话说的题目。", "宝库里的句子都能带进作文。", "写累了就保存草稿，下次我还在这里等你。"]);
   show("essay", "✍️ 周末作文");
 }
 
@@ -857,6 +933,7 @@ function renderEssayWrite(e) {
       <div style="font-size:17px;font-weight:800;color:#7a5a2a">${e.title}</div>
       <div style="font-size:12px;color:#b0997a;margin-top:3px">${esc(e.hook)}</div>
     </div>
+    ${buddyCompanion("我陪你守着草稿。每写完一段，我们就前进一步。", "thinking", "essayWriteBuddy")}
     ${es.reviewed && es.comment ? `<div class="cmtCard">
       <div class="ct">💌 爸爸妈妈的评语　${"⭐".repeat(es.score || 0)}</div>
       <div class="cb">${esc(es.comment)}</div>
@@ -886,8 +963,9 @@ function renderEssayWrite(e) {
     <button class="btn ghost" id="eDone">📄 写完了，交给爸爸妈妈看</button>`;
 
   $$("#scr-essayWrite .eArea").forEach(t => {
-    t.oninput = () => { es.paras[+t.dataset.i] = t.value; save(); };
+    t.oninput = () => { es.paras[+t.dataset.i] = t.value; save(); const done = es.paras.filter(x => x && x.trim()).length; const small = $("#essayWriteBuddy small"); if (small) small.textContent = done ? `已经点亮 ${done}/${e.outline.length} 段，我一直陪着你。` : "我陪你守着草稿。每写完一段，我们就前进一步。"; };
   });
+  bindBuddyCompanion("essayWriteBuddy", ["先写眼前这一段，后面的等会儿再想。", "写累了就点保存，草稿不会跑掉。", "需要素材时，去上面搬一件自己的宝物。"]);
   $$("#scr-essayWrite [data-g]").forEach(c => {
     c.onclick = () => {
       const txt = gemPool[+c.dataset.g].txt;
@@ -898,7 +976,7 @@ function renderEssayWrite(e) {
       sndCoin(); toast("💎 宝物已放进段落里", 1400);
     };
   });
-  $("#eSave").onclick = () => { save(); sndCoin(); toast("💾 草稿已保存", 1500); };
+  $("#eSave").onclick = () => { save(); sndCoin(); toast("💾 草稿已保存", 1500); baibaiSpeak("草稿保存好啦，下次回来我还陪你接着写。"); };
   $("#eDone").onclick = () => {
     const written = es.paras.filter(x => x && x.trim()).length;
     if (written < e.outline.length) { toast("还有 " + (e.outline.length - written) + " 段没写完哦～"); return; }
@@ -908,15 +986,18 @@ function renderEssayWrite(e) {
     confetti(); sndWin();
     addCoins(30);
     addTicket(2, "写完一篇作文");
+    const essaySay = pick(BUDDY.praise);
     $("#scr-done").innerHTML = `
       <div id="doneStars">🏆</div>
       <div id="doneTitle">一整篇作文，写完了！</div>
-      <div id="doneMsg">${buddyMark(46)}「${esc(pick(BUDDY.praise))}」<br>
+      <div class="doneBuddyHero">${buddyAvatar("", 128)}</div>
+      <div id="doneMsg">白白：「${esc(essaySay)}」<br>
         一共 <b>${len}</b> 个字，${e.outline.length} 段。<br><br>
         <b>把手机拿给爸爸妈妈看</b>，请他们读一遍——<br>然后你会拿到 <b>2 张转盘券</b> 🎟️</div>
       <div id="doneCoins">+30 🪙　+2 🎟️</div>
       <button class="btn" id="dBack">回营地</button>`;
     $("#dBack").onclick = () => { navStack = [renderHome]; renderHome(); $$(".tab").forEach(t => t.classList.toggle("on", t.dataset.tab === "home")); };
+    baibaiSpeak(essaySay + " 一整篇作文写完啦！");
     show("done", "🏆 完成");
   };
   show("essayWrite", e.title);

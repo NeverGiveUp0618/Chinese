@@ -70,6 +70,18 @@ body {
 .btn .buddyAvatar { margin:-7px 5px -7px 0; }
 @keyframes bounce { 0%,100% { transform: none; } 30% { transform: translateY(-14px) scale(1.08); } 60% { transform: translateY(0) scale(.96); } }
 #buddySay { font-size: 14px; color: #7a5a2a; background: #f7ecd5; border-radius: 14px; padding: 8px 12px; margin-top: 6px; line-height: 1.5; }
+.buddyCompanion { display:flex; align-items:center; gap:10px; padding:9px 12px; border:1.5px solid #ead7b1; background:linear-gradient(135deg,#fffdf7,#fff4dc); cursor:pointer; }
+.buddyCompanion .buddyTalk { flex:1; min-width:0; }
+.buddyCompanion b { display:block; color:#8a5a2a; font-size:12px; margin-bottom:2px; }
+.buddyCompanion small { display:block; color:#6a5a42; font-size:12px; line-height:1.55; }
+.buddyCompanion .buddyTap { color:#b99b70; font-size:10px; white-space:nowrap; }
+.buddyCompanion.excited { background:linear-gradient(135deg,#fff9df,#ffefbf); border-color:#e5bd62; }
+.buddyCompanion.thinking { background:linear-gradient(135deg,#f8f5ff,#eee7fb); border-color:#d3c0e8; }
+.buddyLive { margin:7px 0 10px; min-height:58px; transition:.2s; }
+.buddyLive.changed .buddyAvatar { animation:bounce .5s; }
+.buddyMapPin { position:absolute; z-index:8; right:-11px; top:-31px; filter:drop-shadow(0 3px 3px rgba(80,55,30,.24)); animation:buddyScout 1.8s ease-in-out infinite; pointer-events:none; }
+.buddyMapPin::after { content:"白白在这里"; position:absolute; left:50%; top:-5px; transform:translate(-50%,-100%); width:max-content; max-width:82px; padding:2px 6px; border-radius:8px; background:#fffdf7; color:#8a5a2a; font-size:8px; font-weight:800; box-shadow:0 2px 5px rgba(90,60,30,.15); }
+@keyframes buddyScout { 0%,100% { transform:translateY(0) rotate(-2deg); } 50% { transform:translateY(-5px) rotate(2deg); } }
 .taskRow { display: flex; align-items: center; gap: 10px; padding: 9px 4px; border-bottom: 1px dashed #ecdcc0; }
 .taskRow:last-child { border-bottom: none; }
 .taskRow .tIcon { font-size: 22px; }
