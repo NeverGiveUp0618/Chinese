@@ -19,6 +19,7 @@ const LS_KEY = "treasureWriting_v1";
 /* 和英语App共享的钱包：同一个域，localStorage 互通 —— 两个学科，一只宠物 */
 const WALLET_KEY = "sharedWallet_v1";
 const SHARED_PET_KEY = "sharedPet_v1"; // 英语衣橱保存的白白最新造型
+const CARD_DAILY_KEY = "sharedCardDaily_v1";
 /* DeepSeek 只通过腾讯云函数安全中转；家长访问口令仅存 sessionStorage，绝不进仓库或备份 */
 const AI_REVIEW_URL = "https://1454399073-kdjvn8zqkf.ap-guangzhou.tencentscf.com/";
 const AI_TOKEN_KEY = "twAiReviewToken_v1";
@@ -64,13 +65,30 @@ function loadSharedPet() {
   } catch (e) {}
   return { v: 1, name: "白白", items: [] };
 }
+function sharedPetBody() {
+  const p=loadSharedPet(), body=String(p.body||"");
+  return /^https:\/\/nevergiveup0618\.github\.io\/English\/assets\/(?:baibai-base\.png|poses\/pose-\d{2}\.webp)$/.test(body) ? body : "assets/baibai-base.png";
+}
+function chineseCardDaily() {
+  let d=null; try { d=JSON.parse(localStorage.getItem(CARD_DAILY_KEY)||"null"); } catch(e) {}
+  if (!d || d.date!==todayStr()) d={date:todayStr(),english:0,chinese:0,pendingChinese:0};
+  d.english=Math.max(0,Number(d.english)||0); d.chinese=Math.max(0,Number(d.chinese)||0); d.pendingChinese=Math.max(0,Number(d.pendingChinese)||0);
+  return d;
+}
+function grantChineseCard() {
+  const d=chineseCardDaily(); if (d.chinese>=5) return false;
+  d.chinese++; d.pendingChinese++;
+  try { localStorage.setItem(CARD_DAILY_KEY,JSON.stringify(d)); } catch(e) {}
+  setTimeout(()=>toast("🐾 白白收好一张语文探险卡！今天 "+d.chinese+"/5，去英语收藏册会自动点亮",2800),500);
+  return true;
+}
 function safePetNum(v, fallback, min, max) {
   v = Number(v); return Number.isFinite(v) ? Math.max(min, Math.min(max, v)) : fallback;
 }
 function sharedPetLayers(size, backLayer) {
   return loadSharedPet().items.slice(0, 30).filter(it => {
     const id = String(it.id || "");
-    const cape = ["bb_wedding","bb_pinkdress","bb_bluedress","bb_tutu","bb_shirt","bb_coat","bb_vest"].includes(id) || id.startsWith("bb_cx_");
+    const cape = ["bb_wedding","bb_pinkdress","bb_bluedress","bb_tutu","bb_shirt","bb_coat","bb_vest"].includes(id) || id.startsWith("bb_cx_") || id.startsWith("bb_br_");
     return !!backLayer === cape;
   }).map(it => {
     const x = safePetNum(it.x, 50, 0, 100), y = safePetNum(it.y, 50, 0, 100);
@@ -262,7 +280,7 @@ function buddyAvatar(id, size, withGear) {
   const sz = size || 116;
   const gear = S.gear || {}, head = GEARS.find(g => g.id === gear.head), hand = GEARS.find(g => g.id === gear.hand), back = GEARS.find(g => g.id === gear.back);
   const showGear = withGear !== false;
-  return `<span class="buddyAvatar" ${id ? `id="${id}"` : ""} style="width:${sz}px;height:${sz}px">${showGear && back ? `<span class="buddyGear back">${back.icon}</span>` : ""}${sharedPetLayers(sz, true)}<img class="buddyBodyImg" src="assets/baibai-base.png" alt="白白">${sharedPetLayers(sz, false)}${showGear && head ? `<span class="buddyGear head">${head.icon}</span>` : ""}${showGear && hand ? `<span class="buddyGear hand">${hand.icon}</span>` : ""}</span>`;
+  return `<span class="buddyAvatar" ${id ? `id="${id}"` : ""} style="width:${sz}px;height:${sz}px">${showGear && back ? `<span class="buddyGear back">${back.icon}</span>` : ""}${sharedPetLayers(sz, true)}<img class="buddyBodyImg" src="${sharedPetBody()}" alt="白白">${sharedPetLayers(sz, false)}${showGear && head ? `<span class="buddyGear head">${head.icon}</span>` : ""}${showGear && hand ? `<span class="buddyGear hand">${hand.icon}</span>` : ""}</span>`;
 }
 function buddyMark(size) { return buddyAvatar("", size || 42, false); }
 function buddyCompanion(text, mood, id) {
@@ -319,6 +337,7 @@ function checkTasks() {
 function bump(k) {
   if (S.daily.date !== todayStr()) S.daily = defState().daily;
   S.daily[k]++; checkTasks();
+  if (k === "gems") grantChineseCard();
 }
 
 /* ================= 营地（首页） ================= */

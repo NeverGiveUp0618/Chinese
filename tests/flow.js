@@ -226,6 +226,10 @@ const ok = (c, m) => { c ? pass++ : fail++; console.log(`  ${c ? "✓" : "✗ FA
   w.eval("addCoins(10)");
   const after = JSON.parse(w.localStorage.getItem("sharedWallet_v1"));
   ok(after.coins === 1009 && after.tickets === 3, "★ 语文App加金币不会覆盖英语App的转盘券");
+  w.localStorage.removeItem("sharedCardDaily_v1");
+  const cardEarned = w.eval("[1,2,3,4,5,6].map(()=>grantChineseCard())");
+  const cardDay = JSON.parse(w.localStorage.getItem("sharedCardDaily_v1"));
+  ok(cardEarned.filter(Boolean).length === 5 && cardDay.chinese === 5 && cardDay.pendingChinese === 5, "★ 语文每日最多获得5张白白卡，并交给英语收藏册点亮");
 
   console.log("— ✍️ 周末作文（脚手架）—");
   $$(".tab").find(t => t.dataset.tab === "home").click();
