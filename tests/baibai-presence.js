@@ -7,6 +7,7 @@ const audioContext = {};
 vm.createContext(audioContext); vm.runInContext(fs.readFileSync(path.join(root, "audio/baibai/manifest.js"), "utf8"), audioContext);
 const recorded = Object.values(audioContext.BAIBAI_AUDIO || {});
 ok(recorded.length === 33 && recorded.every(p => fs.existsSync(path.join(root, p)) && fs.statSync(path.join(root, p)).size > 1000), "33 条常用台词都有固定神经网络录音");
+ok(/XiaoyiNeural.*Cartoon.*Lively/.test(audioContext.BAIBAI_VOICE || ""), "语文与英语统一使用奶声卡通角色音色");
 const dom = new JSDOM(html, { runScripts: "outside-only", url: "https://nevergiveup0618.github.io/Chinese/" });
 const w = dom.window, spoken = [];
 w.AudioContext = class { constructor(){ this.state="running"; this.currentTime=0; this.destination={}; } createOscillator(){ return {type:"",frequency:{value:0},connect(){},start(){},stop(){}}; } createGain(){ return {gain:{value:0,exponentialRampToValueAtTime(){}},connect(){}}; } };

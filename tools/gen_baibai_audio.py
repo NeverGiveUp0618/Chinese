@@ -6,7 +6,7 @@ import edge_tts
 
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "audio" / "baibai"
-VOICE = "zh-CN-XiaoxiaoNeural"
+VOICE = "zh-CN-XiaoyiNeural"  # Cartoon / Lively：与英语白白保持同一个奶声动漫角色音色
 LINES = [
   "这句我要收进我们的寻宝本里！", "哇，画面一下就出来了！", "你这么一写，我好像真的闻到了！",
   "我们配合得真棒，寻宝队继续出发！", "我读了三遍，越读越有意思。", "这个比喻我可想不出来。",
@@ -29,10 +29,10 @@ async def main():
   for i, text in enumerate(LINES, 1):
     name = filename(text); manifest[text] = "audio/baibai/" + name
     target = OUT / name
-    if not target.exists():
-      print(f"[{i}/{len(LINES)}] {text}")
-      await edge_tts.Communicate(text, VOICE, rate="-6%", volume="-2%").save(str(target))
-  (OUT / "manifest.js").write_text("globalThis.BAIBAI_AUDIO = " + json.dumps(manifest, ensure_ascii=False, indent=2) + ";\n", encoding="utf-8")
+    print(f"[{i}/{len(LINES)}] {text}")
+    # 轻微升调 + 略慢：奶声奶气但不尖、不像变声器。
+    await edge_tts.Communicate(text, VOICE, rate="-5%", pitch="+6Hz", volume="-2%").save(str(target))
+  (OUT / "manifest.js").write_text("globalThis.BAIBAI_VOICE = \"zh-CN-XiaoyiNeural · Cartoon · Lively\";\nglobalThis.BAIBAI_AUDIO = " + json.dumps(manifest, ensure_ascii=False, indent=2) + ";\n", encoding="utf-8")
   print(f"Generated {len(manifest)} lines with {VOICE}")
 
 asyncio.run(main())
