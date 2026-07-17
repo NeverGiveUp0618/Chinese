@@ -23,7 +23,7 @@ const ok = (c, m) => { c ? pass++ : fail++; console.log(`  ${c ? "✓" : "✗ FA
 
   console.log("— 营地（首页）—");
   ok($("#scr-home").classList.contains("on"), "首页显示");
-  ok($("#hubLink").href === "https://nevergiveup0618.github.io/learning/", "★ 最顶部可直接返回学习导航页");
+  ok($("#hubLink").href === "https://nevergiveup0618.github.io/learning/" && $("#hubLink").style.display !== "none", "★ 营地显示返回学习导航");
   ok($("#buddyE .buddyBodyImg")?.src.endsWith("/assets/baibai-base.png") && w.eval("BUDDY.name") === "白白", "★ 首页搭档已换成白白");
   w.localStorage.setItem("sharedPet_v1", JSON.stringify({v:1,name:"白白",items:[{id:"bb_bow",e:"🎀",x:30,y:20,s:.6,r:-10}]}));
   w.eval("renderHome()");
@@ -35,9 +35,9 @@ const ok = (c, m) => { c ? pass++ : fail++; console.log(`  ${c ? "✓" : "✗ FA
   ok($("#backBtn").style.visibility === "hidden", "★ 语文营地不显示无意义的页内返回箭头");
   $("#goGems").click();
   ok($$(".tab").find(t => t.dataset.tab === "gems").classList.contains("on"), "★ 从营地进宝库时，高亮宝库而不是营地");
-  ok($("#backBtn").style.visibility === "visible", "★ 进入语文子页面后显示页内返回箭头");
-  $("#backBtn").click();
-  ok($("#scr-home").classList.contains("on") && $$(".tab").find(t => t.dataset.tab === "home").classList.contains("on"), "★ 页内返回回到营地并恢复营地高亮");
+  ok($("#hubLink").style.display !== "none" && $("#backBtn").style.visibility === "hidden", "★ 宝库作为同级大菜单显示学习导航，不显示页内返回");
+  $$(".tab").find(t => t.dataset.tab === "home").click();
+  ok($("#scr-home").classList.contains("on") && $$(".tab").find(t => t.dataset.tab === "home").classList.contains("on"), "★ 底部导航回到营地并恢复高亮");
   ok($("#scr-home").innerHTML.includes("今日探险"), "今日探险任务卡");
   ok($("#scr-home").textContent.includes("约 15 分钟") && !!$("#dailyMain"), "★ 今日探险是可点击的约15分钟交替路线");
   $("#dailyMain").click();
@@ -47,7 +47,7 @@ const ok = (c, m) => { c ? pass++ : fail++; console.log(`  ${c ? "✓" : "✗ FA
 
   console.log("— 寻宝地图 —");
   $$(".tab").find(t => t.dataset.tab === "map").click();
-  const stops = $$("#scr-map .stopCard");
+  let stops = $$("#scr-map .stopCard");
   ok(stops.length === 16, "16 个寻宝站点（新增南京/苏州/开封/广州）");
   ok(!!$("#scr-map .adventureMap") && $$("#scr-map .routeDot").length === 16, "★ 卡通探险路线图完整连接16站");
   ok($("#scr-map").textContent.includes("非地理比例地图"), "★ 明确标注为游戏路线，不冒充地理地图");
@@ -64,6 +64,12 @@ const ok = (c, m) => { c ? pass++ : fail++; console.log(`  ${c ? "✓" : "✗ FA
   ok(cardOf("厦门").classList.contains("locked"), "路线内的下一站仍需闯关解锁");
   cardOf("厦门").click();
   ok($("#scr-map").classList.contains("on"), "点锁定站点不进入");
+  $("#screens").scrollTop=460;
+  cardOf("桂林").click();
+  ok($("#hubLink").style.display === "none" && $("#backBtn").style.visibility === "visible", "进入寻宝项目后只显示返回按钮");
+  $("#backBtn").click();
+  ok($("#scr-map").classList.contains("on") && $("#screens").scrollTop===460, "★ 从项目返回地图时恢复原来的滚动位置");
+  stops=$$("#scr-map .stopCard");
 
   console.log("— 桂林站：知识卡 —");
   cardOf("桂林").click();
@@ -168,7 +174,8 @@ const ok = (c, m) => { c ? pass++ : fail++; console.log(`  ${c ? "✓" : "✗ FA
   ok(S().daily.ideas === 1, "每日任务：脑洞 +1");
 
   console.log("— 每日任务全完成 → 连续天数 + 转盘券 —");
-  ok(S().daily.bonus === true, "★ 三个任务全完成");
+  if(w.eval("dailyPlan().reading")) w.eval("S.daily.readings=1;checkTasks()");
+  ok(S().daily.bonus === true, "★ 当天重点任务完成后盖章（阅读日和写作日都成立）");
   ok(S().streak === 1, "连续天数 = 1");
   ok(!!S().checkins[w.eval("todayStr()")], "今天已打卡");
 

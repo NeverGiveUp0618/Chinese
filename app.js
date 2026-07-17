@@ -230,6 +230,9 @@ function coinFly(n) {
 /* ---------------- 导航 ---------------- */
 let navStack = [];
 let navTabs = [];
+let navScrolls = [];
+let pendingScroll = null;
+let currentScreenId = "";
 let activeTab = "home";
 let activeStudyModule="", studyActiveUntil=0, studyTickAt=Date.now();
 function studyModuleFor(id) {
@@ -253,20 +256,28 @@ function setActiveTab(tab) {
 }
 function show(id, title) {
   flushStudyTime();
-  if (ROOT_TABS[id]) setActiveTab(ROOT_TABS[id]);
+  const isRoot=!!ROOT_TABS[id];
+  if (isRoot) setActiveTab(ROOT_TABS[id]);
   $$(".screen").forEach(s => s.classList.remove("on"));
   $("#scr-" + id).classList.add("on");
   $("#barTitle").textContent = title;
-  $("#backBtn").style.visibility = navStack.length > 1 ? "visible" : "hidden";
-  $("#screens").scrollTop = 0;
+  $("#hubLink").style.display = isRoot ? "inline-flex" : "none";
+  $("#backBtn").style.visibility = isRoot ? "hidden" : "visible";
+  if(navScrolls.length!==navStack.length) navScrolls=navStack.map(()=>0);
+  if(pendingScroll!==null){$("#screens").scrollTop=pendingScroll;pendingScroll=null;}
+  else if(currentScreenId&&currentScreenId!==id) $("#screens").scrollTop=0;
+  currentScreenId=id;
   if (navStack.length === 1) navTabs = [activeTab];
   activeStudyModule=studyModuleFor(id); studyTickAt=Date.now(); touchStudy();
 }
-function go(fn, tab) { navStack.push(fn); navTabs.push(tab || activeTab); if (tab) setActiveTab(tab); fn(); }
-function goTab(fn, tab) { navStack = [fn]; navTabs = [tab || activeTab]; if (tab) setActiveTab(tab); fn(); }
+function rememberScroll(){if(navStack.length)navScrolls[navStack.length-1]=$("#screens").scrollTop;}
+function go(fn, tab) { rememberScroll();navStack.push(fn);navTabs.push(tab||activeTab);navScrolls.push(0);pendingScroll=0;if(tab)setActiveTab(tab);fn(); }
+function goTab(fn, tab) { navStack=[fn];navTabs=[tab||activeTab];navScrolls=[0];pendingScroll=0;if(tab)setActiveTab(tab);fn(); }
+function rootRender(){return({home:renderHome,reading:renderReading,map:renderMap,idea:renderIdea,gems:renderGems})[activeTab]||renderHome;}
 function goBack() {
-  if (navStack.length <= 1) return;
+  if (navStack.length <= 1) {goTab(rootRender(),activeTab);return;}
   navStack.pop(); navTabs.pop();
+  navScrolls.pop();pendingScroll=navScrolls[navScrolls.length-1]||0;
   setActiveTab(navTabs[navTabs.length - 1] || "home");
   navStack[navStack.length - 1]();
 }
