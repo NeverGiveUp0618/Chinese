@@ -1,8 +1,12 @@
-const fs = require("fs"), path = require("path"), { JSDOM } = require("jsdom");
+const fs = require("fs"), path = require("path"), vm = require("vm"), { JSDOM } = require("jsdom");
 const root = path.join(__dirname, "..");
 let passed = 0, failed = 0;
 function ok(v, msg) { if (v) { passed++; console.log("  ✓ " + msg); } else { failed++; console.log("  ✗ " + msg); } }
 const html = fs.readFileSync(path.join(root, "index.html"), "utf8");
+const audioContext = {};
+vm.createContext(audioContext); vm.runInContext(fs.readFileSync(path.join(root, "audio/baibai/manifest.js"), "utf8"), audioContext);
+const recorded = Object.values(audioContext.BAIBAI_AUDIO || {});
+ok(recorded.length === 33 && recorded.every(p => fs.existsSync(path.join(root, p)) && fs.statSync(path.join(root, p)).size > 1000), "33 条常用台词都有固定神经网络录音");
 const dom = new JSDOM(html, { runScripts: "outside-only", url: "https://nevergiveup0618.github.io/Chinese/" });
 const w = dom.window, spoken = [];
 w.AudioContext = class { constructor(){ this.state="running"; this.currentTime=0; this.destination={}; } createOscillator(){ return {type:"",frequency:{value:0},connect(){},start(){},stop(){}}; } createGain(){ return {gain:{value:0,exponentialRampToValueAtTime(){}},connect(){}}; } };
@@ -14,7 +18,7 @@ const $ = s => w.document.querySelector(s);
 console.log("白白贯穿作文旅程并用中文说话");
 $("#buddyE").click();
 ok(spoken.length === 1 && spoken[0].lang === "zh-CN", "首页点击白白会用中文说话");
-ok(spoken[0].pitch >= 1.5 && spoken[0].rate > 1, "白白使用轻快高音调的小奶狗声线");
+ok(spoken[0].pitch >= 1.05 && spoken[0].pitch <= 1.2 && spoken[0].rate < 1, "录音缺失时也使用自然、不尖锐的柔和声线");
 ok(spoken[0].voice && /Xiaoxiao/i.test(spoken[0].voice.name), "优先选择设备里的中文童声");
 
 w.eval("renderMap()");

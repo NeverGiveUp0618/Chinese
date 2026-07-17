@@ -120,6 +120,7 @@ function sndSoft() { tone(520, .12, "sine", 0, .08); }
 /* 白白说汉语：优先使用设备里的中文童声；没有童声时用轻快高音调模拟小奶狗。
    只在孩子点击或完成动作后开口，不在输入过程中打断。 */
 let zhBuddyVoice = null;
+let baibaiAudio = null;
 function chooseBuddyVoice() {
   if (!window.speechSynthesis) return null;
   const voices = speechSynthesis.getVoices ? speechSynthesis.getVoices() : [];
@@ -129,13 +130,23 @@ function chooseBuddyVoice() {
   return zhBuddyVoice;
 }
 function baibaiSpeak(text) {
-  if (!window.speechSynthesis || !window.SpeechSynthesisUtterance || !text) return;
   const clean = String(text).replace(/^白白[：:]?\s*/, "").replace(/[“”「」]/g, "").trim();
   if (!clean) return;
+  /* 固定台词播放同一份神经网络录音：不再受手机自带机器音影响。 */
+  if (typeof BAIBAI_AUDIO !== "undefined" && BAIBAI_AUDIO[clean] && window.Audio) {
+    try {
+      if (baibaiAudio) { baibaiAudio.pause(); baibaiAudio.currentTime = 0; }
+      if (window.speechSynthesis) speechSynthesis.cancel();
+      baibaiAudio = new Audio(BAIBAI_AUDIO[clean]); baibaiAudio.volume = .92;
+      const p = baibaiAudio.play(); if (p && p.catch) p.catch(() => {});
+      return;
+    } catch (e) {}
+  }
+  if (!window.speechSynthesis || !window.SpeechSynthesisUtterance) return;
   try {
     speechSynthesis.cancel();
     const u = new SpeechSynthesisUtterance(clean);
-    u.lang = "zh-CN"; u.rate = 1.08; u.pitch = 1.55; u.volume = .92;
+    u.lang = "zh-CN"; u.rate = .96; u.pitch = 1.12; u.volume = .9;
     u.voice = zhBuddyVoice || chooseBuddyVoice();
     speechSynthesis.speak(u);
   } catch (e) {}
