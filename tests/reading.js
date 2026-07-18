@@ -12,15 +12,15 @@ for(const f of ["audio/baibai/manifest.js","data.js","check.js","app.js"]){const
 const $=s=>w.document.querySelector(s), $$=s=>[...w.document.querySelectorAll(s)], S=()=>w.eval("S");
 
 console.log("阅读探险完整闭环");
-ok(w.eval("READINGS.length")===100 && w.eval("READING_SERIES.length")===4,"100篇原创短文覆盖4个阅读系列");
-ok(w.eval("READING_SERIES.every(s=>READINGS.filter(r=>r.series===s.id).length===25)"),"四个系列各25篇，分布均衡");
-ok(w.eval("new Set(READINGS.map(r=>r.id)).size===100&&new Set(READINGS.map(r=>r.title)).size===100"),"100篇文章ID和标题全部唯一");
+ok(w.eval("READINGS.length")===200 && w.eval("READING_SERIES.length")===4,"200篇原创短文覆盖4个阅读系列");
+ok(w.eval("READING_SERIES.every(s=>READINGS.filter(r=>r.series===s.id).length===50)"),"四个系列各50篇，分布均衡");
+ok(w.eval("new Set(READINGS.map(r=>r.id)).size===200&&new Set(READINGS.map(r=>r.title)).size===200"),"200篇文章ID和标题全部唯一");
 ok(w.eval("READINGS.every(r=>r.paras.length===4&&r.qs.length===3&&r.treasures.length===3)"),"每篇都有4段正文、3道依据题和3句原文宝物");
 ok(w.eval("READINGS.every(r=>r.skill&&r.tool&&TOOLS.some(t=>t.id===r.tool)&&r.qs.every(q=>q.type))"),"每篇都绑定阅读能力、作文法宝和题型数据");
 ok(w.eval("READINGS.every(r=>r.paras.join('').length>=150&&r.qs.every(q=>q.o.length===3&&new Set(q.o).size===3&&q.a>=0&&q.a<3))"),"短文长度和三选一题目结构完整");
 ok($("[data-tab='reading']") && $("#goReading"),"底部导航和首页都有阅读入口");
 $("[data-tab='reading']").click();
-ok($("#scr-reading").classList.contains("on") && $$("[data-reading]").length===25,"进入阅读书架，每次只渲染一个25篇系列");
+ok($("#scr-reading").classList.contains("on") && $$("[data-reading]").length===50,"进入阅读书架，每次只渲染一个50篇系列");
 $("[data-reading='lamp']").click();
 ok($("#scr-reader").classList.contains("on") && $(".readPara").textContent.includes("放学时"),"先只展示第一小段，不一次铺满全文");
 ok(!$("textarea") && w.document.activeElement.tagName!=="TEXTAREA","进入阅读时不显示输入框、不弹键盘");
@@ -43,7 +43,7 @@ w.eval("renderReview('reading')");
 ok($("#scr-review").textContent.includes("阅读仿写") && $("#scr-review").textContent.includes("楼道的灯"),"家长后台可单独查看阅读仿写原文");
 w.eval("S.timeLog[todayStr()]={reading:300,writing:180,essay:60};save()");
 w.eval("renderReport()");
-ok($("#scr-report").textContent.includes("阅读理解") && $("#scr-report").textContent.includes("1/100"),"家长学习报告展示阅读进度与依据题记录");
+ok($("#scr-report").textContent.includes("阅读理解") && $("#scr-report").textContent.includes("1/200"),"家长学习报告展示阅读进度与依据题记录");
 ok($("#scr-report").textContent.includes("有效学习时长")&&$("#scr-report").textContent.includes("每日学习档案")&&$("#scr-report").textContent.includes("本周学习档案"),"家长后台提供今日/本周时长与每日/每周档案");
 ok($("#scr-report").textContent.includes("5分钟")&&$("#scr-report").textContent.includes("3分钟")&&$("#scr-report").textContent.includes("1分钟"),"三个模块的有效时长分别展示");
 console.log(`\n结果: ${pass} 通过, ${fail} 失败`); process.exit(fail?1:0);

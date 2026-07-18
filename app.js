@@ -303,9 +303,16 @@ document.addEventListener("visibilitychange",()=>{ if(document.hidden) flushStud
 function stopS(id) { if (!S.stops[id]) S.stops[id] = { read: false, done: [], stars: {} }; return S.stops[id]; }
 function toolS(id) { if (!S.tools[id]) S.tools[id] = { learned: false, used: 0, best: 0 }; return S.tools[id]; }
 const ROUTES = [
-  { id: "wonder", icon: "⛰️", name: "山河奇境线", sub: "山水、海岛和自然奇观", stops: ["guilin", "xiamen", "chengdu", "lhasa", "sanya", "guangzhou"] },
-  { id: "history", icon: "🏯", name: "古都时光线", sub: "穿过城墙，和古人碰面", stops: ["beijing", "xian", "luoyang", "kaifeng", "nanjing"] },
-  { id: "craft", icon: "🎨", name: "匠心风物线", sub: "壁画、园林、建筑和冰雪", stops: ["dunhuang", "shanghai", "hangzhou", "harbin", "suzhou"] }
+  { id:"wonder",icon:"⛰️",name:"山河奇境线",sub:"山水、海岛和自然奇观",stops:["guilin","sanya","dali"] },
+  { id:"coast",icon:"⛵",name:"海风古港线",sub:"沿海而行，寻找港口故事",stops:["xiamen","qingdao","quanzhou"] },
+  { id:"southwest",icon:"🐼",name:"西南云山线",sub:"从盆地走向高原",stops:["chengdu","chongqing","lhasa"] },
+  { id:"history",icon:"🏯",name:"古都时光线",sub:"穿过城墙，和古人碰面",stops:["beijing","xian","nanjing"] },
+  { id:"central",icon:"🗿",name:"中原石刻线",sub:"读懂古城、石窟与旧都",stops:["luoyang","kaifeng","datong"] },
+  { id:"craft",icon:"🎨",name:"匠心风物线",sub:"瓷器、园林和江南手艺",stops:["jingdezhen","suzhou","hangzhou"] },
+  { id:"river",icon:"🌉",name:"江河烟火线",sub:"顺着水路读城市生活",stops:["wuhan","changsha","yangzhou"] },
+  { id:"north",icon:"❄️",name:"北方城景线",sub:"桥梁、园林和冰雪城市",stops:["tianjin","chengde","shenyang"] },
+  { id:"frontier",icon:"🐫",name:"丝路边城线",sub:"从壁画走向多彩街巷",stops:["dunhuang","kashgar","harbin"] },
+  { id:"city",icon:"🌃",name:"城市文脉线",sub:"现代街景里也藏着旧故事",stops:["shanghai","guangzhou","shaoxing"] }
 ];
 function routeOf(stopId) { return ROUTES.find(r => r.stops.includes(stopId)); }
 function stopUnlocked(i) {
@@ -313,7 +320,7 @@ function stopUnlocked(i) {
   const stop = STOPS[i], route = routeOf(stop.id);
   if (!route) return i === 0;
   const ri = route.stops.indexOf(stop.id);
-  if (ri === 0) return true;                  // 三条路线都能自己选，不强迫走唯一顺序
+  if (ri === 0) return true;                  // 十条路线都能自己选，不强迫走唯一顺序
   const prev = STOPS.find(s => s.id === route.stops[ri - 1]);
   return stopS(prev.id).done.length >= 2;     // 上一站做完 2 个任务就开下一站
 }
@@ -639,10 +646,10 @@ function renderMap() {
       <div style="font-size:12px;color:#b0997a;margin-top:2px">已完成 ${doneQuests()}/${totalQuests()} 个寻宝任务</div>
       <div style="font-size:10px;color:#b9aa94;margin-top:4px">游戏路线图 · 非地理比例地图</div>
     </div>
-    <div style="font-size:12px;color:#8a6a2a;text-align:center;margin:4px 0 10px">三条路线任选一条，今天想去哪儿由你决定</div>
+    <div style="font-size:12px;color:#8a6a2a;text-align:center;margin:4px 0 10px">十条路线任选一条，今天想去哪儿由你决定</div>
     ${ROUTES.map(route => `<div class="routeChapter" data-route="${route.id}">
       <div class="routeTitle"><span>${route.icon}</span><span>${route.name}<small>${route.sub}</small></span></div>
-      <div class="adventureMap comicMap ${route.id}Map">
+      <div class="adventureMap comicMap ${route.id}Map ${["wonder","craft","history"].includes(route.id) ? "" : "compactMap"}">
       ${routeMapBackdrop(route)}
       ${route.stops.map((id, ri) => {
       const i = STOPS.findIndex(x => x.id === id), s = STOPS[i];

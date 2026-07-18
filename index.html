@@ -182,7 +182,7 @@ body {
 .stopName { font-size: 16px; font-weight: 800; color: #7a5a2a; }
 .stopSub { font-size: 12px; color: #b0997a; }
 .stopStars { font-size: 12px; color: #d9a441; letter-spacing: 0; }
-/* 三条原创漫画地图：参考相对方位，不使用中国轮廓、国界或省界 */
+/* 十条原创漫画地图：参考相对方位，不使用中国轮廓、国界或省界 */
 .comicMap { padding:0; overflow:hidden; }
 .comicMap::before { display:none; }
 .comicRoad { position:absolute; inset:8px 0 24px; width:100%; overflow:visible; }
@@ -223,6 +223,13 @@ body {
 .historyDecor small { display:block; font-size:9px; color:#a4763e; font-weight:800; margin-top:-5px; }
 .historyDecor.gate { right:35%; top:25px; }.historyDecor.tower { left:3%; top:105px; font-size:34px; }.historyDecor.scroll { left:40%; top:300px; font-size:35px; transform:rotate(8deg); }.historyDecor.river { left:5%; top:350px; font-size:25px; color:#79a7ad; transform:rotate(-12deg); }.historyDecor.school { right:30%; top:355px; font-size:38px; }
 .historyCloud { position:absolute; right:36%; top:8px; font-size:30px; opacity:.68; }
+.compactMap { height:360px; margin-top:8px; border-radius:18px; background:linear-gradient(180deg,#eef8ff,#fff5db 56%,#e8f2df); box-shadow:inset 0 0 28px rgba(95,80,45,.1); }
+.compactMap .comicRoad { height:330px; }.compactMap .comicStop { width:31%; }
+.compactMap .comicStop.step-0 { right:2%; top:28px; }.compactMap .comicStop.step-1 { left:2%; top:144px; }.compactMap .comicStop.step-2 { right:9%; top:252px; }
+.coastMap,.riverMap { background:linear-gradient(180deg,#e5f7ff,#dff4ef 58%,#f8edcf); }
+.southwestMap,.frontierMap { background:linear-gradient(180deg,#edf0ff,#f7e8ce 55%,#e4efd8); }
+.centralMap,.northMap { background:linear-gradient(180deg,#fff5dc,#eadcc5 58%,#dceaf0); }
+.cityMap { background:linear-gradient(180deg,#f0eaff,#ffe9dc 55%,#e2f1ef); }
 @media (max-width:400px) {
   .adventureMap::before { left:18px; }
   .routeStop, .routeStop.right { width:100%; margin-left:0; padding:6px 0 6px 38px; }

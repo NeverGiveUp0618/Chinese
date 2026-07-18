@@ -25,7 +25,7 @@ const S = () => w.eval("S");
   ok(STOPS.every(s => s.quests.length === 5), "每座城市 5 个写作任务");
   const gs = ["景", "物", "人", "事", "食"];
   ok(STOPS.every(s => gs.every(g => s.quests.some(q => q.genre === g))), "★ 每座城市都覆盖 景/物/人/事/食 五大题材");
-  ok(STOPS.length === 16 && STOPS.reduce((a, s) => a + s.quests.length, 0) === 80, "★ 16 座城市，共 80 个写作任务");
+  ok(STOPS.length === 30 && STOPS.reduce((a, s) => a + s.quests.length, 0) === 150, "★ 30 座城市，共 150 个写作任务");
   const added = STOPS.filter(s => ["nanjing", "suzhou", "kaifeng", "guangzhou"].includes(s.id));
   ok(added.length === 4 && added.every(s => s.cards.length === 4), "★ 四座新城市各有4张完整知识卡");
   ok(added.every(s => s.quests.every(q => w.eval("judge")(q.demo.replace(/<[^>]+>/g, ""), q.tool).hit)), "★ 新任务的20条范例都能命中指定技巧");
@@ -197,7 +197,7 @@ const S = () => w.eval("S");
   // 全部城市解锁
   $$(".tab").find(t => t.dataset.tab === "map").click();
   ok($$("#scr-map .stopCard.locked").length === 0, "★ 16 座城市全部解锁");
-  ok($$("#scr-map .stopCard").length === 16, "★ 现在有 16 座城市");
+  ok($$("#scr-map .stopCard").length === 30, "★ 现在有 30 座城市");
 
   // 首页横幅
   $$(".tab").find(t => t.dataset.tab === "home").click();
@@ -225,7 +225,7 @@ const S = () => w.eval("S");
   $("#tToggle").click();
   ok(S().testMode === false, "可关闭");
   $$(".tab").find(t => t.dataset.tab === "map").click();
-  ok($$("#scr-map .stopCard.locked").length === 13, "★ 关闭后恢复路线解锁（三条首站开放）");
+  ok($$("#scr-map .stopCard.locked").length === 20, "★ 关闭后恢复路线解锁（十条首站开放）");
 
   console.log(`\n结果: ${pass} 通过, ${fail} 失败`);
   process.exit(fail ? 1 : 0);
