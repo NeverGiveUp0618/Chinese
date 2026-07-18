@@ -105,19 +105,26 @@ function safePetNum(v, fallback, min, max) {
 }
 function sharedPetLayers(size, backLayer) {
   return loadSharedPet().items.slice(0, 30).filter(it => {
-    const id = String(it.id || "");
-    const cape = ["bb_wedding","bb_pinkdress","bb_bluedress","bb_tutu","bb_shirt","bb_coat","bb_vest"].includes(id) || id.startsWith("bb_cx_") || id.startsWith("bb_br_");
-    return !!backLayer === cape;
+    /* 新披风有透明胸口开口和完整领圈，和其他装扮一样盖在白白前面才像穿上。 */
+    return !backLayer;
   }).map(it => {
     const x = safePetNum(it.x, 50, 0, 100), y = safePetNum(it.y, 50, 0, 100);
     const s = safePetNum(it.s, 1, .3, 3), r = safePetNum(it.r, 0, -360, 360);
     const base = safePetNum(it.base, .3, .2, 1.2);
     const hue = safePetNum(it.hue, 0, 0, 360);
+    const allowedFx = [
+      "saturate(0) brightness(1.28)", "hue-rotate(285deg) saturate(.82) brightness(1.18)",
+      "hue-rotate(145deg) saturate(1.22) brightness(.92)", "hue-rotate(230deg) saturate(.92) brightness(1.12)",
+      "hue-rotate(315deg) saturate(1.18) brightness(1.08)", "none",
+      "hue-rotate(165deg) saturate(.92) brightness(1.12)"
+    ];
+    const fx = allowedFx.includes(String(it.fx || "")) ? String(it.fx) : "";
     const art = String(it.art || "");
     /* 只接受英语项目内置的透明装扮图，拒绝存档里任意外链或 HTML。 */
-    const safeArt = /^https:\/\/nevergiveup0618\.github\.io\/English\/assets\/outfits\/[a-z0-9-]+\.svg$/.test(art);
+    const safeArt = /^https:\/\/nevergiveup0618\.github\.io\/English\/assets\/outfits\/[a-z0-9-]+\.(?:svg|webp)$/.test(art);
     const sizeStyle = safeArt ? `width:${Math.round(size * base * s)}px` : `font-size:${Math.round(size * .3 * s)}px`;
-    return `<span class="buddyShared ${backLayer ? "back" : ""}" style="left:${x}%;top:${y}%;${sizeStyle};transform:translate(-50%,-50%) rotate(${r}deg)">${safeArt ? `<img src="${art}" alt=""${hue ? ` style="filter:hue-rotate(${hue}deg)"` : ""}>` : esc(it.e || "")}</span>`;
+    const filter = fx && fx !== "none" ? fx : hue ? `hue-rotate(${hue}deg)` : "";
+    return `<span class="buddyShared ${backLayer ? "back" : ""}" style="left:${x}%;top:${y}%;${sizeStyle};transform:translate(-50%,-50%) rotate(${r}deg)">${safeArt ? `<img src="${art}" alt=""${filter ? ` style="filter:${filter}"` : ""}>` : esc(it.e || "")}</span>`;
   }).join("");
 }
 let W = loadWallet();
