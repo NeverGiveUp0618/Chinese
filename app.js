@@ -90,8 +90,8 @@ function sharedPetBody() {
 function sharedPetName(){return String(loadSharedPet().name||"白白").replace(/[<>]/g,"").slice(0,8)||"白白";}
 function chineseCardDaily() {
   let d=null; try { d=JSON.parse(localStorage.getItem(CARD_DAILY_KEY)||"null"); } catch(e) {}
-  if (!d || d.date!==todayStr()) d={date:todayStr(),english:0,chinese:0,pendingChinese:0};
-  d.english=Math.max(0,Number(d.english)||0); d.chinese=Math.max(0,Number(d.chinese)||0); d.pendingChinese=Math.max(0,Number(d.pendingChinese)||0);
+  if (!d || d.date!==todayStr()) d={date:todayStr(),english:0,chinese:0,math:0,pendingChinese:0,pendingMath:0};
+  ["english","chinese","math","pendingChinese","pendingMath"].forEach(k=>d[k]=Math.max(0,Number(d[k])||0));
   return d;
 }
 function grantChineseCard() {
