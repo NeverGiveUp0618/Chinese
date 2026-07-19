@@ -1150,7 +1150,10 @@ function renderEssayList() {
 function renderEssayWrite(e) {
   if (!S.essays[e.id]) S.essays[e.id] = { paras: e.outline.map(() => ""), done: false, score: 0, reviewed: false, comment: "" };
   const es = S.essays[e.id];
-  const gemPool = S.gems.slice(0, 6);
+  const targetTools = new Set((e.check||[]).flatMap(x => {
+    const s=String(x); return [s.includes("比喻")&&"simile",s.includes("五感")&&"sense",(s.includes("动作")||s.includes("过程"))&&"action",(s.includes("心理")||s.includes("心情")||s.includes("想法"))&&"heart",(s.includes("环境")||s.includes("画面")||s.includes("变化"))&&"scene",s.includes("对话")&&"dialogue"].filter(Boolean);
+  }));
+  const gemPool = S.gems.map((g,i)=>({g,i,match:targetTools.has(g.tool)})).sort((a,b)=>(b.match-a.match)-(isAiGem(a.g)-isAiGem(b.g))).slice(0,6);
   $("#scr-essayWrite").innerHTML = `
     <div class="card" style="text-align:center;padding:12px">
       <div style="font-size:34px">${e.icon}</div>
@@ -1166,9 +1169,10 @@ function renderEssayWrite(e) {
       <div class="cb" style="font-size:13px">拿给他们看一眼吧——他们读完给你写评语，你还能再拿 2 张转盘券。</div>
     </div>` : ""}
     ${gemPool.length ? `<div class="card" style="padding:12px">
-      <div style="font-size:13px;font-weight:700;color:#8a6a2a;margin-bottom:6px">💎 从你的宝库里挑素材用（点一下复制）</div>
-      ${gemPool.map((g, i) => `<div class="gem" style="margin-bottom:6px;padding:8px 10px;cursor:pointer" data-g="${i}">
-        <div class="gemTxt" style="font-size:13px">${isAiGem(g) ? `<span class="gemTag ai">✨ AI 参考·非原创</span><br>` : ""}${esc(g.txt.slice(0, 40))}${g.txt.length > 40 ? "…" : ""}</div>
+      <div style="font-size:13px;font-weight:700;color:#8a6a2a;margin-bottom:3px">💎 从你的宝库里挑素材：白白优先选了更合适的</div>
+      <div style="font-size:11px;color:#a18b68;margin-bottom:7px">优先匹配这篇作文要用的法宝；点一下，再选择放进哪一段。</div>
+      ${gemPool.map(({g}, i) => `<div class="gem" style="margin-bottom:6px;padding:8px 10px;cursor:pointer" data-g="${i}">
+        <div class="gemTxt" style="font-size:13px">${targetTools.has(g.tool)?`<span class="gemTag">🐾 适合这篇</span> `:""}${isAiGem(g) ? `<span class="gemTag ai">✨ AI 参考·非原创</span><br>` : ""}${esc(g.txt.slice(0, 40))}${g.txt.length > 40 ? "…" : ""}</div>
       </div>`).join("")}
     </div>` : ""}
     ${e.outline.map((o, i) => `
@@ -1192,7 +1196,7 @@ function renderEssayWrite(e) {
   bindBuddyCompanion("essayWriteBuddy", ["先写眼前这一段，后面的等会儿再想。", "写累了就点保存，草稿不会跑掉。", "需要素材时，去上面搬一件自己的宝物。"]);
   $$("#scr-essayWrite [data-g]").forEach(c => {
     c.onclick = () => {
-      const txt = gemPool[+c.dataset.g].txt;
+      const txt = gemPool[+c.dataset.g].g.txt;
       const areas = $$("#scr-essayWrite .eArea");
       const target = areas.find(a => document.activeElement === a) || areas.find(a => !a.value.trim()) || areas[0];
       target.value = (target.value ? target.value + "\n" : "") + txt;

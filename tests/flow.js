@@ -24,7 +24,7 @@ const ok = (c, m) => { c ? pass++ : fail++; console.log(`  ${c ? "✓" : "✗ FA
   console.log("— 营地（首页）—");
   ok($("#scr-home").classList.contains("on"), "首页显示");
   const swText = fs.readFileSync(CN + "/sw.js", "utf8");
-  ok(swText.includes("treasure-writing-v39") && swText.includes("const CORE") && !swText.includes("BAIBAI_AUDIO"), "★ 启动只预缓存8个核心文件，白白语音按需缓存");
+  ok(swText.includes("treasure-writing-v40") && swText.includes("const CORE") && !swText.includes("BAIBAI_AUDIO"), "★ 启动只预缓存8个核心文件，白白语音按需缓存");
   ok(swText.includes("fallback || fresh"), "★ 慢网络二次打开优先显示缓存首页");
   ok($("#hubLink").href === "https://nevergiveup0618.github.io/learning/" && $("#hubLink").style.display !== "none", "★ 营地显示返回学习导航");
   ok($("#buddyE .buddyBodyImg")?.src.endsWith("/assets/baibai-base.png") && w.eval("BUDDY.name") === "白白", "★ 首页搭档已换成白白");
