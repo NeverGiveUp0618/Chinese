@@ -45,6 +45,9 @@ w.eval("renderGems()");
 ok($("#gemsBuddy .buddyBodyImg"), "宝库里白白会一起回看成果");
 w.eval("renderEssayList()");
 ok($("#essayBuddy .buddyBodyImg"), "周末作文由白白陪着分段完成");
+w.localStorage.setItem("sharedPet_v1",JSON.stringify({v:2,name:"星星伙伴",body:"data:image/png;base64,VEVTVA==",items:[]}));
+w.eval("renderMap()");
+ok($("#scr-map .buddyBodyImg").src.startsWith("data:image/png") && w.eval("sharedPetName()") === "星星伙伴", "英语自绘角色会同步取代语文端伙伴形象和名字");
 
 console.log(`\n结果: ${passed} 通过, ${failed} 失败`);
 process.exit(failed ? 1 : 0);

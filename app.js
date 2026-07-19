@@ -85,8 +85,9 @@ function loadSharedPet() {
 }
 function sharedPetBody() {
   const p=loadSharedPet(), body=String(p.body||"");
-  return /^https:\/\/nevergiveup0618\.github\.io\/English\/assets\/(?:baibai-base\.png|poses\/pose-\d{2}\.webp)$/.test(body) ? body : "assets/baibai-base.png";
+  return /^https:\/\/nevergiveup0618\.github\.io\/English\/assets\/(?:baibai-base\.png|poses\/pose-\d{2}\.webp)$/.test(body) || (body.startsWith("data:image/png;base64,") && body.length<1500000) ? body : "assets/baibai-base.png";
 }
+function sharedPetName(){return String(loadSharedPet().name||"白白").replace(/[<>]/g,"").slice(0,8)||"白白";}
 function chineseCardDaily() {
   let d=null; try { d=JSON.parse(localStorage.getItem(CARD_DAILY_KEY)||"null"); } catch(e) {}
   if (!d || d.date!==todayStr()) d={date:todayStr(),english:0,chinese:0,pendingChinese:0};
@@ -121,7 +122,7 @@ function sharedPetLayers(size, backLayer) {
     const fx = allowedFx.includes(String(it.fx || "")) ? String(it.fx) : "";
     const art = String(it.art || "");
     /* 只接受英语项目内置的透明装扮图，拒绝存档里任意外链或 HTML。 */
-    const safeArt = /^https:\/\/nevergiveup0618\.github\.io\/English\/assets\/outfits\/[a-z0-9-]+\.(?:svg|webp)$/.test(art);
+    const safeArt = /^https:\/\/nevergiveup0618\.github\.io\/English\/assets\/outfits\/[a-z0-9-]+\.(?:svg|webp)$/.test(art) || (art.startsWith("data:image/svg+xml;charset=utf-8,") && art.length<8000);
     const sizeStyle = safeArt ? `width:${Math.round(size * base * s)}px` : `font-size:${Math.round(size * .3 * s)}px`;
     const filter = fx && fx !== "none" ? fx : hue ? `hue-rotate(${hue}deg)` : "";
     return `<span class="buddyShared ${backLayer ? "back" : ""}" style="left:${x}%;top:${y}%;${sizeStyle};transform:translate(-50%,-50%) rotate(${r}deg)">${safeArt ? `<img src="${art}" alt=""${filter ? ` style="filter:${filter}"` : ""}>` : esc(it.e || "")}</span>`;
@@ -343,12 +344,12 @@ function buddyAvatar(id, size, withGear) {
   const sz = size || 116;
   const gear = S.gear || {}, head = GEARS.find(g => g.id === gear.head), hand = GEARS.find(g => g.id === gear.hand), back = GEARS.find(g => g.id === gear.back);
   const showGear = withGear !== false;
-  return `<span class="buddyAvatar" ${id ? `id="${id}"` : ""} style="width:${sz}px;height:${sz}px">${showGear && back ? `<span class="buddyGear back">${back.icon}</span>` : ""}${sharedPetLayers(sz, true)}<img class="buddyBodyImg" src="${sharedPetBody()}" alt="白白">${sharedPetLayers(sz, false)}${showGear && head ? `<span class="buddyGear head">${head.icon}</span>` : ""}${showGear && hand ? `<span class="buddyGear hand">${hand.icon}</span>` : ""}</span>`;
+  return `<span class="buddyAvatar" ${id ? `id="${id}"` : ""} style="width:${sz}px;height:${sz}px">${showGear && back ? `<span class="buddyGear back">${back.icon}</span>` : ""}${sharedPetLayers(sz, true)}<img class="buddyBodyImg" src="${sharedPetBody()}" alt="${esc(sharedPetName())}">${sharedPetLayers(sz, false)}${showGear && head ? `<span class="buddyGear head">${head.icon}</span>` : ""}${showGear && hand ? `<span class="buddyGear hand">${hand.icon}</span>` : ""}</span>`;
 }
 function buddyMark(size) { return buddyAvatar("", size || 42, false); }
 function buddyCompanion(text, mood, id) {
   return `<div class="card buddyCompanion ${mood || ""}"${id ? ` id="${id}"` : ""}>
-    ${buddyAvatar("", 58)}<div class="buddyTalk"><b>白白陪你一起</b><small>${esc(text)}</small></div><span class="buddyTap">点我 🐾</span>
+    ${buddyAvatar("", 58)}<div class="buddyTalk"><b>${esc(sharedPetName())}陪你一起</b><small>${esc(text)}</small></div><span class="buddyTap">点我 🐾</span>
   </div>`;
 }
 function bindBuddyCompanion(id, lines) {
