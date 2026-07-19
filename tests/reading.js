@@ -37,6 +37,7 @@ ok(S().daily.readings===1 && w.eval("dailyPlan().reading ? taskDone().t1 : !task
 ok(JSON.parse(w.localStorage.getItem("sharedCardDaily_v1")).chinese===1,"首次完成阅读获得1张语文白白卡");
 $("#openImitate").click();
 ok(!!$("#readingImitate") && w.document.activeElement!==$("#readingImitate"),"点想仿写后才出现输入框，且不自动聚焦");
+ok($("#readingImitate").classList.contains("writingField")&&w.getComputedStyle($("#readingImitate")).width!=="auto","阅读仿写输入框使用统一全宽样式");
 $("#readingImitate").value="楼道的灯照不了整座城市，却刚好照亮我回家的最后一级台阶。"; $("#saveImitate").click();
 ok(S().gems.length===1 && S().gems[0].kind==="reading" && S().readings.lamp.imitated,"仿写的新句子作为孩子原创进入宝库");
 w.eval("renderReview('reading')");

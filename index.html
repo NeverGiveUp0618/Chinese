@@ -261,12 +261,16 @@ body {
 .questBox { background: #fffdf7; border: 2px dashed #d9b871; border-radius: 16px; padding: 14px; margin-bottom: 12px; }
 .questTool { display: inline-block; background: #f5e6c8; color: #8a5a2a; border-radius: 12px; padding: 3px 10px; font-size: 12px; font-weight: 700; margin-bottom: 6px; }
 .questAsk { font-size: 15px; line-height: 1.7; color: #4a3c28; }
+.writingField,
 #writeArea {
+  display: block; width: 100%; max-width: 100%;
+  box-sizing: border-box;
   width: 100%; min-height: 120px; border: 2px solid #e5d2ae; border-radius: 14px;
   padding: 12px; font-size: 16px; line-height: 1.8; color: #4a3c28; background: #fffdf7;
   font-family: inherit; resize: none; outline: none; user-select: text; -webkit-user-select: text;
 }
-#writeArea:focus { border-color: #d9a441; }
+.writingField:focus,
+#writeArea:focus { border-color: #d9a441; box-shadow: 0 0 0 3px rgba(217,164,65,.12); }
 #writeMeta { display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: #b0997a; margin: 6px 2px 10px; }
 #micTip { font-size: 11px; color: #b0997a; background: #f7ecd5; border-radius: 10px; padding: 6px 10px; margin-bottom: 10px; line-height: 1.6; }
 

@@ -257,7 +257,7 @@ function flushStudyTime(force) {
   try { localStorage.setItem(LS_KEY,JSON.stringify(S)); } catch(e) {}
 }
 const ROOT_TABS = { home: "home", reading: "reading", map: "map", idea: "idea", gems: "gems" };
-function restoreScreenScroll(top){top=Math.max(0,Number(top)||0);const el=$("#screens"),restore=()=>{el.scrollTop=top};restore();requestAnimationFrame(()=>{restore();requestAnimationFrame(restore)});}
+function restoreScreenScroll(top){top=Math.max(0,Number(top)||0);const el=$("#screens"),restore=()=>{el.scrollTop=top},raf=typeof requestAnimationFrame==="function"?requestAnimationFrame:(fn)=>fn();restore();raf(()=>{restore();raf(restore)});}
 function setActiveTab(tab) {
   if (!tab) return;
   activeTab = tab;
@@ -569,7 +569,7 @@ function startReading(r) {
   }
   function drawFinish(showWrite) {
     $("#scr-reader").innerHTML=`<div class="card" style="text-align:center">${buddyAvatar("",92)}<div style="font-size:20px;font-weight:800;color:#6b8f50">阅读探险完成！</div><div style="font-size:12px;color:#8a795e;margin-top:5px">找到3条依据 · 原文宝物已收好${rec.done?' · 首次奖励已记录':''}</div></div>
-      <div class="card"><div class="sectionTitle" style="margin-top:0">✍️ 阅读接上作文：${TOOLS.find(t=>t.id===r.tool).icon} ${TOOLS.find(t=>t.id===r.tool).name}</div><div style="font-size:13px;color:#725f42;line-height:1.75">${esc(r.imitate)}</div>${showWrite?`<textarea id="readingImitate" rows="4" placeholder="点击这里再开始写，不会自动弹出键盘"></textarea><div id="readingCount" style="font-size:11px;color:#a18b68;text-align:right">0 字</div><button class="btn" id="saveImitate" style="margin-top:8px">把我的新句子收进宝库</button>`:`<button class="btn ghost" id="openImitate" style="margin-top:10px">我想用这件法宝仿写一句</button>`}</div>
+      <div class="card"><div class="sectionTitle" style="margin-top:0">✍️ 阅读接上作文：${TOOLS.find(t=>t.id===r.tool).icon} ${TOOLS.find(t=>t.id===r.tool).name}</div><div style="font-size:13px;color:#725f42;line-height:1.75">${esc(r.imitate)}</div>${showWrite?`<textarea id="readingImitate" class="writingField" rows="4" placeholder="点击这里再开始写，不会自动弹出键盘"></textarea><div id="readingCount" style="font-size:11px;color:#a18b68;text-align:right">0 字</div><button class="btn" id="saveImitate" style="margin-top:8px">把我的新句子收进宝库</button>`:`<button class="btn ghost" id="openImitate" style="margin-top:10px">我想用这件法宝仿写一句</button>`}</div>
       <button class="btn ghost" id="backReading">先回阅读书架</button>`;
     if (showWrite) {
       const ta=$("#readingImitate"); ta.oninput=()=>$("#readingCount").textContent=[...ta.value.trim()].length+" 字";
