@@ -1055,12 +1055,12 @@ function renderGems() {
           <span><span class="gemTag ${isAiGem(g) ? "ai" : ""}">${isAiGem(g) ? "✨ AI 参考·非原创" : t ? t.icon + " " + t.short : "💡 脑洞"}</span>　${esc(g.from)}</span>
           <span>${isAiGem(g) ? "灵感收藏" : "⭐".repeat(g.stars || 1)}　${g.d}</span>
         </div>
-        ${!isAiGem(g) ? `<button class="btn small ghost gemUnkeep" data-index="${S.gems.indexOf(g)}" style="margin-top:8px">移回练习档案</button>` : ""}
+        ${!isAiGem(g) ? `<button class="btn small ghost gemUnkeep" data-index="${S.gems.indexOf(g)}" style="margin-top:8px">📔 暂不收藏（练习记录仍保留）</button>` : ""}
       </div>`;
     }).join("") : `<div class="card" style="text-align:center;color:#b0997a;font-size:14px;padding:26px">宝库只收藏你自己想留下的句子。<br>写完练习，不收藏也完全可以。 💎</div>`}
     ${archived.length ? `<div class="card"><div style="font-weight:800;color:#7a5a2a">📔 练习档案里还有 ${archived.length} 句</div><div style="font-size:12px;color:#9a8668;margin:5px 0 10px">它们不占宝库，需要时可以再挑回来。</div>${archived.slice(0,6).map(x=>`<div style="border-top:1px solid #f0e4ce;padding:9px 0"><div style="font-size:13px;line-height:1.6">${esc(x.g.txt)}</div><button class="btn small ghost archiveKeep" data-index="${x.i}" style="margin-top:6px">💎 这句我想收藏</button></div>`).join("")}</div>` : ""}`;
   if ($("#goRemix")) $("#goRemix").onclick = () => go(renderRemix);
-  $$(".gemUnkeep").forEach(b => b.onclick = () => { S.gems[+b.dataset.index].kept = false; save(); toast("📔 已移回练习档案，完成记录还在"); renderGems(); });
+  $$(".gemUnkeep").forEach(b => b.onclick = () => { S.gems[+b.dataset.index].kept = false; save(); toast("📔 已暂不收藏，练习记录仍然保留"); renderGems(); });
   $$(".archiveKeep").forEach(b => b.onclick = () => { S.gems[+b.dataset.index].kept = true; bump("gems"); save(); toast("💎 已经收藏进宝库"); renderGems(); });
   bindBuddyCompanion("gemsBuddy", ["这些都是你写出来的，我一件都没忘。", "挑一句去变身，旧宝物也会好好留着。", "以后写作文，我们就来这里搬宝物。"]);
   show("gems", "💎 我的宝库");
@@ -1231,7 +1231,8 @@ function renderEssayWrite(e) {
  * 所以家长的评语不是可选项，是这个产品闭环的最后一环。
  */
 const PARENT_PIN = "223826";
-let parentOK = false;
+const PARENT_AUTH_KEY = "learningParentAuth_v1";
+let parentOK = sessionStorage.getItem(PARENT_AUTH_KEY) === "1";
 
 /* 题材统计：写人/写景/状物/写事/美食 各练了多少次 */
 const GENRES = [["景", "写景"], ["物", "状物"], ["人", "写人"], ["事", "写事"], ["食", "美食"]];
@@ -1248,8 +1249,10 @@ function genreTotal(g) {
 }
 
 function renderParent() {
+  const parentBack = `<a class="parentBackHub" href="https://nevergiveup0618.github.io/learning/?parent=1">← 返回统一家长中心</a>`;
   if (!parentOK) {
     $("#scr-parent").innerHTML = `
+      ${parentBack}
       <div class="card" style="text-align:center;padding:24px 16px">
         <div style="font-size:32px">🔐</div>
         <div style="font-size:15px;font-weight:800;color:#8a6a2a;margin:8px 0">家长验证</div>
@@ -1260,7 +1263,7 @@ function renderParent() {
         <div id="pMsg" style="font-size:12px;color:#b0997a;margin-top:10px">这里是爸爸妈妈的地方，小朋友先去寻宝吧～</div>
       </div>`;
     const tryIn = () => {
-      if ($("#pGate").value.trim() === PARENT_PIN) { parentOK = true; sndCoin(); renderParent(); }
+      if ($("#pGate").value.trim() === PARENT_PIN) { parentOK = true; sessionStorage.setItem(PARENT_AUTH_KEY,"1"); sndCoin(); renderParent(); }
       else { $("#pMsg").textContent = "密码不对哦～"; $("#pGate").value = ""; }
     };
     $("#pGo").onclick = tryIn;
@@ -1273,6 +1276,7 @@ function renderParent() {
   const days = Object.keys(S.checkins).length;
   const pending = ESSAYS.filter(e => { const es = S.essays[e.id]; return es && es.done && !es.reviewed; }).length;
   $("#scr-parent").innerHTML = `
+    ${parentBack}
     ${pending ? `<div class="card" style="background:#fff3d6;text-align:center;padding:12px" id="pendBanner">
       <div style="font-size:15px;font-weight:800;color:#c07a2c">✍️ 有 ${pending} 篇作文等你批阅！</div>
       <div style="font-size:12px;color:#a08a6a;margin-top:2px">她写完了，正等着你的评语——点我去看</div>
@@ -2090,8 +2094,8 @@ function renderBackup() {
 
 /* ================= 启动 ================= */
 updateCoinBox();
-navStack = [renderHome]; navTabs = ["home"];
-renderHome();
+if (new URLSearchParams(location.search).get("parent") === "1") { navStack=[renderHome,renderParent];navTabs=["home","home"];renderParent(); }
+else { navStack = [renderHome]; navTabs = ["home"]; renderHome(); }
 save();
 /* 从英语衣橱回来时，立即换成刚保存的白白造型；金币也一起重读。 */
 document.addEventListener("visibilitychange", () => {
