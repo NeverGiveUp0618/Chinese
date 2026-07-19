@@ -257,6 +257,7 @@ function flushStudyTime(force) {
   try { localStorage.setItem(LS_KEY,JSON.stringify(S)); } catch(e) {}
 }
 const ROOT_TABS = { home: "home", reading: "reading", map: "map", idea: "idea", gems: "gems" };
+function restoreScreenScroll(top){top=Math.max(0,Number(top)||0);const el=$("#screens"),restore=()=>{el.scrollTop=top};restore();requestAnimationFrame(()=>{restore();requestAnimationFrame(restore)});}
 function setActiveTab(tab) {
   if (!tab) return;
   activeTab = tab;
@@ -272,8 +273,8 @@ function show(id, title) {
   $("#hubLink").style.display = isRoot ? "inline-flex" : "none";
   $("#backBtn").style.visibility = isRoot ? "hidden" : "visible";
   if(navScrolls.length!==navStack.length) navScrolls=navStack.map(()=>0);
-  if(pendingScroll!==null){$("#screens").scrollTop=pendingScroll;pendingScroll=null;}
-  else if(currentScreenId&&currentScreenId!==id) $("#screens").scrollTop=0;
+  if(pendingScroll!==null){const top=pendingScroll;pendingScroll=null;restoreScreenScroll(top);}
+  else if(currentScreenId&&currentScreenId!==id) restoreScreenScroll(0);
   currentScreenId=id;
   if (navStack.length === 1) navTabs = [activeTab];
   activeStudyModule=studyModuleFor(id); studyTickAt=Date.now(); touchStudy();
