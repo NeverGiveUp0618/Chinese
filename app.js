@@ -16,6 +16,7 @@ function dateAdd(n) { const d = new Date(Date.now() + n * 864e5); return d.getFu
 
 /* ---------------- 存档 ---------------- */
 const LS_KEY = "treasureWriting_v1";
+const JOURNEY_KEY = "sharedLearningJourney_v1";
 /* 和英语App共享的钱包：同一个域，localStorage 互通 —— 两个学科，一只宠物 */
 const WALLET_KEY = "sharedWallet_v1";
 const SHARED_PET_KEY = "sharedPet_v1"; // 英语衣橱保存的白白最新造型
@@ -243,6 +244,9 @@ let pendingScroll = null;
 let currentScreenId = "";
 let activeTab = "home";
 let activeStudyModule="", studyActiveUntil=0, studyTickAt=Date.now();
+let journeyScreen="",journeyAt=Date.now();
+function flushJourney(){if(!journeyScreen)return;const seconds=Math.min(1800,Math.round((Date.now()-journeyAt)/1000));if(seconds<2)return;try{const rows=JSON.parse(localStorage.getItem(JOURNEY_KEY)||"[]");rows.push({subject:"cn",screen:journeyScreen,day:todayStr(),seconds,at:Date.now()});localStorage.setItem(JOURNEY_KEY,JSON.stringify(rows.slice(-500)));}catch(e){}journeyAt=Date.now();}
+function journeyView(id){if(id===journeyScreen)return;flushJourney();journeyScreen=id;journeyAt=Date.now();}
 function studyModuleFor(id) {
   if (["reading","reader"].includes(id)) return "reading";
   if (["map","stop","cards","write","idea","tools","teach","gems","remix","done"].includes(id)) return "writing";
@@ -264,6 +268,7 @@ function setActiveTab(tab) {
   $$(".tab").forEach(x => x.classList.toggle("on", x.dataset.tab === tab));
 }
 function show(id, title) {
+  journeyView(id);
   flushStudyTime();
   const isRoot=!!ROOT_TABS[id];
   if (isRoot) setActiveTab(ROOT_TABS[id]);
@@ -299,7 +304,7 @@ $$(".tab").forEach(t => {
 /* 只统计前台且最近有交互的有效学习时间；页面放着不动一分钟后自动停表。 */
 ["pointerdown","keydown","input","touchstart"].forEach(ev=>document.addEventListener(ev,touchStudy,{passive:true}));
 setInterval(flushStudyTime,15000);
-document.addEventListener("visibilitychange",()=>{ if(document.hidden) flushStudyTime(true); else {studyTickAt=Date.now();touchStudy();} });
+document.addEventListener("visibilitychange",()=>{ if(document.hidden){flushStudyTime(true);flushJourney();} else {studyTickAt=Date.now();journeyAt=Date.now();touchStudy();} });
 
 /* ---------------- 进度 ---------------- */
 function stopS(id) { if (!S.stops[id]) S.stops[id] = { read: false, done: [], stars: {} }; return S.stops[id]; }
