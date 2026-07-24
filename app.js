@@ -102,6 +102,10 @@ function grantChineseCard() {
   setTimeout(()=>toast("🐾 白白收好一张语文探险卡！今天 "+d.chinese+"/5，去英语收藏册会自动点亮",2800),500);
   return true;
 }
+const SUBJECT_BALANCE_KEY="sharedSubjectBalance_v1";
+function markBalancedSubject(subject){let d=null;try{d=JSON.parse(localStorage.getItem(SUBJECT_BALANCE_KEY)||"null")}catch(e){}if(!d||d.date!==todayStr())d={date:todayStr(),en:false,cn:false,ma:false,two:false,three:false};const first=!d[subject];d[subject]=true;const count=[d.en,d.cn,d.ma].filter(Boolean).length,two=count>=2&&!d.two,three=count===3&&!d.three;if(two)d.two=true;if(three)d.three=true;try{localStorage.setItem(SUBJECT_BALANCE_KEY,JSON.stringify(d))}catch(e){}return{first,two,three,count}}
+function queueBalancedCard(){const d=chineseCardDaily();d.pendingBalance=Math.max(0,Number(d.pendingBalance)||0)+1;try{localStorage.setItem(CARD_DAILY_KEY,JSON.stringify(d))}catch(e){}}
+function rewardBalancedChinese(){const r=markBalancedSubject("cn");if(!r.first)return;addCoins(20);toast("📖 今天首次完成语文核心任务，+20金币",2400);if(r.two)addTicket(1,"今天已探索两个学科");if(r.three){queueBalancedCard();setTimeout(()=>toast("🌟 三科探索完成！限定白白卡已送往英语收藏册",3000),1200)}}
 function safePetNum(v, fallback, min, max) {
   v = Number(v); return Number.isFinite(v) ? Math.max(min, Math.min(max, v)) : fallback;
 }
@@ -414,6 +418,7 @@ function checkTasks() {
 function bump(k) {
   if (S.daily.date !== todayStr()) S.daily = defState().daily;
   S.daily[k]++; checkTasks();
+  if(taskDone().t1)rewardBalancedChinese();
   if (k === "gems") grantChineseCard();
 }
 
@@ -2048,6 +2053,8 @@ function renderReward() {
       · 完成一个寻宝任务：金币（按星级）<br>
       · 写一个脑洞：金币（只看敢不敢写，不挑毛病）<br>
       · 完成今日探险（三件事）：20 金币 + 1 张转盘券<br>
+      · <b>当天首次完成语文核心任务：额外 20 金币</b><br>
+      · 任意两科达标：额外 1 张转盘券；三科达标：限定白白卡<br>
       · <b>写完一整篇作文：30 金币 + 2 张转盘券</b><br>
       · <b>你批阅完一篇作文：再 + 2 张转盘券</b>（所以她会催你看）
     </div>`;
