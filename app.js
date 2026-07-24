@@ -504,18 +504,50 @@ function renderHome() {
 }
 
 /* ================= 原创作文库：范文 → 逻辑 → 挖空改写 ================= */
-let modelCategory="all",modelQuery="";
+const MODEL_WRITING_TASKS=[
+  {id:"person",icon:"👤",name:"写一个人",hint:"家人、老师、同学",cats:["people"]},
+  {id:"event",icon:"🌟",name:"写难忘的事",hint:"成长、温暖、第一次",cats:["events","family"]},
+  {id:"activity",icon:"🎉",name:"写一次活动",hint:"校园、劳动、节日",cats:["school","work","culture"]},
+  {id:"nature",icon:"🌿",name:"写景物或动植物",hint:"景色、物品、观察",cats:["scenery","objects","observation"]},
+  {id:"imagine",icon:"🚀",name:"写想象作文",hint:"未来、魔法、童话",cats:["imagination"]},
+  {id:"assigned",icon:"✏️",name:"老师给了题目",hint:"输入题目关键词来找",cats:null}
+];
+const MODEL_QUERY_HINTS=[
+  [/人|老师|同学|朋友|家人|长辈/,["people"]],
+  [/事|经历|难忘|第一次|成长|温暖/,["events","family"]],
+  [/活动|比赛|运动会|校园|课堂|劳动/,["school","work"]],
+  [/景|风光|公园|校园一角|四季/,["scenery"]],
+  [/动物|植物|物品|观察|实验|日记/,["objects","observation"]],
+  [/想象|未来|假如|童话|科幻|梦/,["imagination"]],
+  [/传统|节日|春节|端午|中秋|文化/,["culture"]]
+];
+let modelCategory="all",modelQuery="",modelTask="all";
+function modelQueryMatch(e,q){
+  if(!q)return true;
+  const hay=e.title+e.categoryName;
+  if(hay.includes(q))return true;
+  const compact=q.replace(/[，。！？、：:\s]/g,"");
+  const pairs=[];for(let i=0;i<compact.length-1;i++)pairs.push(compact.slice(i,i+2));
+  const useful=pairs.filter(x=>!["请写","写一","一篇","作文","一个","一件","一次","我的","为题","题目","关于","有关"].includes(x));
+  if(useful.some(x=>hay.includes(x)))return true;
+  return MODEL_QUERY_HINTS.some(([pattern,cats])=>pattern.test(q)&&cats.includes(e.category));
+}
 function renderModelLibrary(){
   const q=modelQuery.trim();
-  const list=MODEL_ESSAYS.filter(e=>(modelCategory==="all"||e.category===modelCategory)&&(!q||e.title.includes(q)||e.categoryName.includes(q)));
+  const task=MODEL_WRITING_TASKS.find(x=>x.id===modelTask);
+  const list=MODEL_ESSAYS.filter(e=>(!task||!task.cats||task.cats.includes(e.category))&&(modelCategory==="all"||e.category===modelCategory)&&modelQueryMatch(e,q));
   $("#scr-models").innerHTML=`
     <div class="card modelHero"><b>📚 三四年级原创作文库</b><span>200 篇完整范文，全部按常见题材分类。<br>先看一篇怎样搭起来，再把真实的人和事换进去。</span></div>
-    <input class="modelSearch" id="modelSearch" value="${esc(modelQuery)}" placeholder="搜索题目，如：妈妈、校园、第一次" autocomplete="off">
+    <div class="modelTaskTitle">我今天想写什么？<small>点一下，马上缩小范围</small></div>
+    <div class="modelTasks">${MODEL_WRITING_TASKS.map(x=>`<button class="modelTask ${modelTask===x.id?"on":""}" data-model-task="${x.id}"><b>${x.icon} ${x.name}</b><span>${x.hint}</span></button>`).join("")}</div>
+    <input class="modelSearch" id="modelSearch" value="${esc(modelQuery)}" placeholder="${modelTask==="assigned"?"输入老师给的题目，如：难忘的一天":"搜索题目，如：妈妈、校园、第一次"}" autocomplete="off">
+    ${modelTask==="assigned"?`<div style="font-size:10px;color:#9f8a69;margin:5px 4px 2px">不用完整照抄题目，输入“熟悉的人”“运动会”“植物观察”等关键词就可以。</div>`:""}
     <div class="modelCats"><button class="modelCat ${modelCategory==="all"?"on":""}" data-model-cat="all">全部 200</button>${MODEL_ESSAY_CATEGORIES.map(c=>`<button class="modelCat ${modelCategory===c.id?"on":""}" data-model-cat="${c.id}">${c.icon} ${c.name} ${c.count}</button>`).join("")}</div>
-    <div style="font-size:11px;color:#a18b68;margin:0 2px 8px">找到 ${list.length} 篇 · 每篇约 320–400 字</div>
-    <div class="modelList">${list.map(e=>`<button class="modelItem" data-model-id="${e.id}"><b>${e.icon} ${esc(e.title)}</b><small>${e.categoryName} · ${e.grade} · ${e.count}字</small><em>${S.modelDrafts[e.id]?"继续我的改写 →":S.modelReads[e.id]?"再看一次 →":"看范文和写作思路 →"}</em></button>`).join("")}</div>`;
+    <div style="font-size:11px;color:#a18b68;margin:0 2px 8px">${task&&task.id!=="assigned"?`“${task.name}”找到 `:"找到 "}${list.length} 篇 · 每篇约 310–390 字</div>
+    <div class="modelList">${list.map(e=>`<button class="modelItem" data-model-id="${e.id}"><b>${e.icon} ${esc(e.title)}</b><small>${e.categoryName} · ${e.grade} · ${e.count}字</small><em>${S.modelDrafts[e.id]?"继续我的改写 →":S.modelReads[e.id]?"再看一次 →":"看范文和写作思路 →"}</em></button>`).join("")}${list.length?"":`<div class="card" style="grid-column:1/-1;text-align:center;color:#9b8769;font-size:13px">暂时没找到完全相同的题目，试试只输入最重要的两个字。</div>`}</div>`;
   $("#modelSearch").oninput=e=>{modelQuery=e.target.value;renderModelLibrary();const s=$("#modelSearch");s.focus();s.setSelectionRange(s.value.length,s.value.length)};
-  $$("#scr-models [data-model-cat]").forEach(b=>b.onclick=()=>{modelCategory=b.dataset.modelCat;renderModelLibrary()});
+  $$("#scr-models [data-model-task]").forEach(b=>b.onclick=()=>{modelTask=b.dataset.modelTask;modelCategory="all";modelQuery="";renderModelLibrary();if(modelTask==="assigned")$("#modelSearch").focus()});
+  $$("#scr-models [data-model-cat]").forEach(b=>b.onclick=()=>{modelTask="all";modelCategory=b.dataset.modelCat;renderModelLibrary()});
   $$("#scr-models [data-model-id]").forEach(b=>{b.onclick=()=>{const e=MODEL_ESSAYS.find(x=>x.id===b.dataset.modelId);go(()=>renderModelDetail(e))}});
   show("models","📚 原创作文库");
 }
