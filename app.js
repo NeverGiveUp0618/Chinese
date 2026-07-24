@@ -41,6 +41,8 @@ function defState() {
     studyArchive: {}, // date -> [{module,type,title}] 每日学习档案
     gear: { head: "", hand: "", back: "" }, // 白白的语文探险装备：只解锁，不磨损、不降级
     essays: {},     // essayId -> {paras:[], done:bool, score:0}
+    modelReads: {}, // 原创作文库：essayId -> 阅读次数
+    modelDrafts: {},// 挖空改写保存的个人版本
     aiReviews: {},  // AI 结果缓存（家长完整参考 + 孩子即时灵感；不含访问口令）
     checkins: {},
     testMode: false // 家长测试模式：全部解锁，给孩子用前记得关掉
@@ -55,6 +57,8 @@ S.readingBook = Array.isArray(S.readingBook) ? S.readingBook : [];
 S.readingStats = S.readingStats || {};
 S.timeLog = S.timeLog || {};
 S.studyArchive = S.studyArchive || {};
+S.modelReads = S.modelReads || {};
+S.modelDrafts = S.modelDrafts || {};
 S.daily = Object.assign(defState().daily, S.daily || {});
 if (S.daily.date !== todayStr()) S.daily = defState().daily;
 function save() { try { localStorage.setItem(LS_KEY, JSON.stringify(S)); } catch (e) {} }
@@ -252,7 +256,7 @@ let journeyScreen="",journeyAt=Date.now();
 function flushJourney(){if(!journeyScreen)return;const seconds=Math.min(1800,Math.round((Date.now()-journeyAt)/1000));if(seconds<2)return;try{const rows=JSON.parse(localStorage.getItem(JOURNEY_KEY)||"[]");rows.push({subject:"cn",screen:journeyScreen,day:todayStr(),seconds,at:Date.now()});localStorage.setItem(JOURNEY_KEY,JSON.stringify(rows.slice(-500)));}catch(e){}journeyAt=Date.now();}
 function journeyView(id){if(id===journeyScreen)return;flushJourney();journeyScreen=id;journeyAt=Date.now();}
 function studyModuleFor(id) {
-  if (["reading","reader"].includes(id)) return "reading";
+  if (["reading","reader","models","modelDetail"].includes(id)) return "reading";
   if (["map","stop","cards","write","idea","tools","teach","gems","remix","done"].includes(id)) return "writing";
   if (["essay","essayWrite"].includes(id)) return "essay";
   return "";
@@ -466,6 +470,7 @@ function renderHome() {
       <div class="card" id="goIdea"><div class="hIcon">💡</div><div class="hName">脑洞任务</div><div class="hSub">随便写，没有对错</div></div>
       <div class="card" id="goGems"><div class="hIcon">💎</div><div class="hName">我的宝库</div><div class="hSub">${ownCount} 件原创${aiCount ? ` · ${aiCount} 条 AI 灵感` : ""}</div></div>
       <div class="card" id="goTools"><div class="hIcon">🧰</div><div class="hName">六件法宝</div><div class="hSub">已学会 ${learned}/6</div></div>
+      <div class="card" id="goModels"><div class="hIcon">📚</div><div class="hName">原创作文库</div><div class="hSub">200篇 · 看思路 · 填空改写</div></div>
       <div class="card ${S.gems.length >= 2 ? "transferReady" : ""}" id="goEssay"><div class="hIcon">✍️</div><div class="hName">把宝物写成作文</div><div class="hSub">${S.gems.length ? `带 ${S.gems.length} 句素材去写` : "先寻宝，周末再来组装"}</div></div>
     </div>
     <div style="height:10px"></div>
@@ -487,6 +492,7 @@ function renderHome() {
   $("#goIdea").onclick = () => go(renderIdea, "idea");
   $("#goGems").onclick = () => go(renderGems, "gems");
   $("#goTools").onclick = () => go(renderTools, "tools");
+  $("#goModels").onclick = () => go(renderModelLibrary);
   $("#goEssay").onclick = () => go(renderEssayList);
   $("#goPassport").onclick = () => go(renderPassport);
   $("#parentLink").onclick = () => go(renderParent);
@@ -495,6 +501,53 @@ function renderHome() {
   };
   show("home", "🏕️ 探险营地");
   updateCoinBox();
+}
+
+/* ================= 原创作文库：范文 → 逻辑 → 挖空改写 ================= */
+let modelCategory="all",modelQuery="";
+function renderModelLibrary(){
+  const q=modelQuery.trim();
+  const list=MODEL_ESSAYS.filter(e=>(modelCategory==="all"||e.category===modelCategory)&&(!q||e.title.includes(q)||e.categoryName.includes(q)));
+  $("#scr-models").innerHTML=`
+    <div class="card modelHero"><b>📚 三四年级原创作文库</b><span>200 篇完整范文，全部按常见题材分类。<br>先看一篇怎样搭起来，再把真实的人和事换进去。</span></div>
+    <input class="modelSearch" id="modelSearch" value="${esc(modelQuery)}" placeholder="搜索题目，如：妈妈、校园、第一次" autocomplete="off">
+    <div class="modelCats"><button class="modelCat ${modelCategory==="all"?"on":""}" data-model-cat="all">全部 200</button>${MODEL_ESSAY_CATEGORIES.map(c=>`<button class="modelCat ${modelCategory===c.id?"on":""}" data-model-cat="${c.id}">${c.icon} ${c.name} ${c.count}</button>`).join("")}</div>
+    <div style="font-size:11px;color:#a18b68;margin:0 2px 8px">找到 ${list.length} 篇 · 每篇约 320–400 字</div>
+    <div class="modelList">${list.map(e=>`<button class="modelItem" data-model-id="${e.id}"><b>${e.icon} ${esc(e.title)}</b><small>${e.categoryName} · ${e.grade} · ${e.count}字</small><em>${S.modelDrafts[e.id]?"继续我的改写 →":S.modelReads[e.id]?"再看一次 →":"看范文和写作思路 →"}</em></button>`).join("")}</div>`;
+  $("#modelSearch").oninput=e=>{modelQuery=e.target.value;renderModelLibrary();const s=$("#modelSearch");s.focus();s.setSelectionRange(s.value.length,s.value.length)};
+  $$("#scr-models [data-model-cat]").forEach(b=>b.onclick=()=>{modelCategory=b.dataset.modelCat;renderModelLibrary()});
+  $$("#scr-models [data-model-id]").forEach(b=>{b.onclick=()=>{const e=MODEL_ESSAYS.find(x=>x.id===b.dataset.modelId);go(()=>renderModelDetail(e))}});
+  show("models","📚 原创作文库");
+}
+function modelValues(e){
+  const saved=S.modelDrafts[e.id]&&S.modelDrafts[e.id].values||{};
+  return Object.fromEntries(e.fields.map(f=>[f.key,String(saved[f.key]||"")]));
+}
+function filledModelParagraph(p,values,e){
+  const labels=Object.fromEntries(e.fields.map(f=>[f.key,f.label]));
+  let out="",last=0;
+  p.replace(/{{(\w+)}}/g,(m,key,at)=>{out+=esc(p.slice(last,at));out+=values[key]?`<b>${esc(values[key])}</b>`:`<span class="blank">${esc(labels[key]||"请填写")}</span>`;last=at+m.length;return m});
+  return out+esc(p.slice(last));
+}
+function plainModelEssay(e,values){
+  const labels=Object.fromEntries(e.fields.map(f=>[f.key,f.label]));
+  return e.cloze.map(p=>p.replace(/{{(\w+)}}/g,(m,k)=>values[k]||`【${labels[k]||"请填写"}】`)).join("\n\n");
+}
+function renderModelDetail(e){
+  if(!e)return renderModelLibrary();
+  S.modelReads[e.id]=(S.modelReads[e.id]||0)+1;save();
+  const values=modelValues(e);
+  $("#scr-modelDetail").innerHTML=`
+    <div class="card modelEssayTitle"><div class="icon">${e.icon}</div><h2>${esc(e.title)}</h2><small>${e.categoryName} · ${e.grade} · ${e.count}字</small></div>
+    <div class="card modelText"><div class="sectionTitle" style="margin-top:0">📖 完整范文</div>${e.paras.map(p=>`<p>${esc(p)}</p>`).join("")}<div style="font-size:11px;color:#a18b68;text-indent:0;margin-top:8px">这篇用来学习结构和表达；改写时请换成自己真正见过、做过或想象过的内容。</div></div>
+    <div class="card modelPart"><h3>第一部分：本篇作文的逻辑梳理</h3><div class="partIntro">先只看四步思路。合上范文后，照着这条路线讲一遍自己的故事，就能开始写。</div>${e.logic.map((x,i)=>`<div class="logicStep"><i>${i+1}</i><span>${esc(x)}</span></div>`).join("")}<div style="font-size:12px;font-weight:800;color:#80663e;margin:12px 0 5px">我想直接按思路写自己的：</div><textarea class="writingField" id="modelOwnWrite" rows="8" placeholder="点击这里，从自己的真实人物、事情或想象开始写……">${esc(S.modelDrafts[e.id]&&S.modelDrafts[e.id].ownText||"")}</textarea><button class="btn ghost wide" id="saveOwnModel" style="margin-top:8px">保存这篇完全由我写的作文</button></div>
+    <div class="card modelPart green"><h3>第二部分：挖空填一填，生成我的版本</h3><div class="partIntro">把下面五处换成自己的真实内容。相同内容会自动放进文章对应位置，不用反复输入。</div><div class="clozeFields">${e.fields.map(f=>`<div class="clozeField"><label>${esc(f.label)}<span style="font-weight:400;color:#b09b7b">　范文原来写：${esc(f.value)}</span></label><input data-model-field="${f.key}" value="${esc(values[f.key])}" placeholder="点击后填写自己的内容" autocomplete="off"></div>`).join("")}</div><div class="myEssayPreview" id="myEssayPreview"></div><div class="modelActions"><button class="btn ghost" id="copyModel">复制我的版本</button><button class="btn" id="saveModel">保存我的改写</button></div></div>`;
+  const paint=()=>{$("#myEssayPreview").innerHTML=e.cloze.map(p=>`<p>${filledModelParagraph(p,values,e)}</p>`).join("")};
+  $$("[data-model-field]").forEach(input=>input.oninput=()=>{values[input.dataset.modelField]=input.value.trim();paint()});
+  $("#saveOwnModel").onclick=()=>{const text=$("#modelOwnWrite").value.trim();if([...text].length<80){toast("已经开头啦，再写到 80 字以上就能保存");return}const old=S.modelDrafts[e.id]||{};S.modelDrafts[e.id]=Object.assign({},old,{ownText:text,d:todayStr()});save();logStudyEvent("essay","按逻辑原创",e.title);sndWin();toast("💾 我的原创作文已经保存",1800)};
+  $("#saveModel").onclick=()=>{const filled=Object.values(values).filter(Boolean).length;if(filled<3){toast("先填写至少 3 处自己的内容，再保存吧～");return}const old=S.modelDrafts[e.id]||{};S.modelDrafts[e.id]=Object.assign({},old,{values:Object.assign({},values),text:plainModelEssay(e,values),d:todayStr()});save();logStudyEvent("essay","范文改写",e.title);sndWin();toast("💾 我的改写已经保存",1800)};
+  $("#copyModel").onclick=()=>{const text=plainModelEssay(e,values);if(navigator.clipboard)navigator.clipboard.writeText(text).then(()=>toast("✅ 已复制我的版本")).catch(()=>toast("复制失败，请先保存后再试"));else toast("当前浏览器不支持一键复制")};
+  paint();show("modelDetail",e.title);
 }
 
 /* ================= 阅读探险：读 → 找依据 → 收好句 → 自愿仿写 ================= */
@@ -1306,6 +1359,7 @@ function renderParent() {
         <div><b>${pending}</b><small>待批阅</small></div>
       </div>
       <div style="font-size:10px;color:#b0997a;text-align:center;margin-top:7px">寻宝 ${doneQuests()}/${totalQuests()} · 累计探险 ${days} 天</div>
+      <div style="font-size:10px;color:#7b8f62;text-align:center;margin-top:4px">作文库已读 ${Object.keys(S.modelReads).length}/200 · 已保存挖空改写 ${Object.keys(S.modelDrafts).length} 篇</div>
     </div>
 
     <div class="card actRow" id="pReview">
@@ -1733,10 +1787,12 @@ function renderReview(filter = "all") {
   const gems = S.gems.map((g, i) => ({ g, i, k: gemKind(g) })).filter(x => !isAiGem(x.g));
   const filteredEssays = filter === "pending" ? pending : (filter === "all" || filter === "essay" ? written : []);
   const filteredGems = filter === "all" ? gems : gems.filter(x => x.k === filter);
+  const modelWorks=Object.entries(S.modelDrafts).map(([id,d])=>({e:MODEL_ESSAYS.find(x=>x.id===id),d})).filter(x=>x.e);
+  const filteredModels=filter==="all"||filter==="model"?modelWorks:[];
   const tabs = [
-    ["all", "全部", written.length + gems.length], ["pending", "待批作文", pending.length],
+    ["all", "全部", written.length + gems.length + modelWorks.length], ["pending", "待批作文", pending.length],
     ["essay", "作文", written.length], ["quest", "寻宝练笔", gems.filter(x => x.k === "quest").length],
-    ["reading", "阅读仿写", gems.filter(x => x.k === "reading").length], ["idea", "脑洞", gems.filter(x => x.k === "idea").length], ["remix", "宝物变身", gems.filter(x => x.k === "remix").length]
+    ["reading", "阅读仿写", gems.filter(x => x.k === "reading").length], ["idea", "脑洞", gems.filter(x => x.k === "idea").length], ["remix", "宝物变身", gems.filter(x => x.k === "remix").length],["model","范文改写",modelWorks.length]
   ];
   $("#scr-review").innerHTML = `
     <div class="card" style="padding:12px;font-size:12.5px;color:#6a5a42;line-height:1.8">
@@ -1764,11 +1820,19 @@ function renderReview(filter = "all") {
         <div class="workMeta">${t ? t.icon + " 目标法宝：" + t.short : "自由表达"}　·　点开查看完整记录和批阅区</div>
       </div>`;
     }).join("")}
-    ${!filteredEssays.length && !filteredGems.length ? `<div class="card" style="text-align:center;color:#b0997a;font-size:14px;padding:26px">这个分类还没有作品</div>` : ""}`;
+    ${filteredModels.map(({e,d})=>{const text=d.ownText||d.text||"",kind=d.ownText?"按逻辑原创":"范文改写";return `<div class="card workItem" data-model-work="${e.id}"><div class="workTop"><span class="workType reading">${kind}</span><b style="font-size:13px;color:#7a5a2a">${esc(e.title)}</b><span class="workDate">${esc(d.d||"")}</span></div><div class="workPrompt">${d.ownText?"只参考了四步逻辑，正文由孩子自己写":"参考了作文库的结构，替换成自己的内容"}</div><div class="workText">${esc(text.slice(0,120))}${text.length>120?"…":""}</div><div class="workMeta">${[...text].length} 字 · 点开查看完整内容</div></div>`}).join("")}
+    ${!filteredEssays.length && !filteredGems.length && !filteredModels.length ? `<div class="card" style="text-align:center;color:#b0997a;font-size:14px;padding:26px">这个分类还没有作品</div>` : ""}`;
   $$("#scr-review .workTab").forEach(b => b.onclick = () => renderReview(b.dataset.filter));
   $$("#scr-review .actRow").forEach(c => c.onclick = () => go(() => renderReviewOne(c.dataset.e)));
   $$("#scr-review .workItem").forEach(c => c.onclick = () => go(() => renderTrainingOne(+c.dataset.g)));
+  $$("#scr-review [data-model-work]").forEach(c=>c.onclick=()=>go(()=>renderModelWork(c.dataset.modelWork)));
   show("review", "🗂️ 孩子作品与批阅");
+}
+function renderModelWork(id){
+  const e=MODEL_ESSAYS.find(x=>x.id===id),d=S.modelDrafts[id];
+  if(!e||!d){toast("这篇改写找不到了");goBack();return}
+  $("#scr-reviewOne").innerHTML=`<div class="card"><div class="workTop"><span class="workType reading">${d.ownText?"按逻辑原创":"范文改写"}</span><b style="font-size:15px;color:#7a5a2a">${esc(e.title)}</b><span class="workDate">${esc(d.d||"")}</span></div><div class="sectionTitle">孩子保存的完整版本</div><div class="workText">${esc(d.ownText||d.text||"")}</div></div><div class="card" style="font-size:12px;line-height:1.8;color:#7a6b53"><b>查看时建议：</b>先找一处属于孩子自己的真实细节，再看哪些句子还保留了范文痕迹。一次只请她改一处，不要求整篇重写。</div>`;
+  show("reviewOne","📚 范文改写");
 }
 
 function renderTrainingOne(index) {

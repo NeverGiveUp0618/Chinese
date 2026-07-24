@@ -52,7 +52,7 @@ const S = () => w.eval("S");
   ok($("#scr-review").classList.contains("on"), "进入批阅台");
   ok($("#scr-review").innerHTML.includes("等你批阅"), "列表显示待批阅");
   ok($("#scr-review").innerHTML.includes("只提一个"), "★ 教家长怎么批：先夸一句，只提一个改进点");
-  ok($$("#scr-review .workTab").length === 7, "★ 作文、阅读仿写、寻宝练笔、脑洞和宝物变身可分类查看");
+  ok($$("#scr-review .workTab").length === 8, "★ 作文、范文改写、阅读仿写、寻宝练笔、脑洞和宝物变身可分类查看");
   $$("#scr-review .actRow")[0].click();
   ok($("#scr-reviewOne").classList.contains("on"), "进入单篇批阅");
   ok($("#scr-reviewOne").innerHTML.includes("绿色的大馒头"), "★ 能读到孩子写的全文");

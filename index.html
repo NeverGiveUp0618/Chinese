@@ -389,6 +389,25 @@ body {
 .toolSub { font-size: 12px; color: #b0997a; font-weight: 400; display: block; margin-top: 1px; }
 .toolLv { font-size: 13px; color: #d9a441; font-weight: 700; }
 .teachBox { background: #fffdf7; border-radius: 14px; padding: 14px; font-size: 14px; line-height: 1.9; color: #5a4a34; }
+/* ---- 200篇原创作文库 ---- */
+.modelHero{background:linear-gradient(145deg,#fff7df,#f1f7e8);text-align:center}
+.modelHero b{display:block;color:#7a5a2a;font-size:18px}.modelHero span{display:block;color:#9a8668;font-size:12px;line-height:1.7;margin-top:4px}
+.modelSearch{width:100%;box-sizing:border-box;border:2px solid #e5d2ae;border-radius:14px;background:#fffdf7;padding:11px 13px;color:#4a3c28;font:inherit;font-size:14px;outline:none}
+.modelSearch:focus{border-color:#d9a441;box-shadow:0 0 0 3px rgba(217,164,65,.12)}
+.modelCats{display:flex;gap:7px;overflow-x:auto;padding:8px 1px 10px;scrollbar-width:none}.modelCats::-webkit-scrollbar{display:none}
+.modelCat{flex:0 0 auto;border:1.5px solid #e5d2ae;border-radius:18px;background:#fffdf7;color:#80663e;padding:7px 11px;font:inherit;font-size:12px;font-weight:800}
+.modelCat.on{background:#fff0c9;border-color:#d9a441;color:#925a16}
+.modelList{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.modelItem{border:1.5px solid #eadcc3;border-radius:16px;background:#fffdf7;padding:12px;text-align:left;color:#5a4a34;min-height:112px;font:inherit}
+.modelItem b,.modelItem small,.modelItem em{display:block}.modelItem b{font-size:14px;color:#76552b;line-height:1.45}.modelItem small{font-size:10px;color:#a38c69;margin-top:5px}.modelItem em{font-style:normal;font-size:11px;color:#708c59;margin-top:9px;font-weight:800}
+.modelEssayTitle{text-align:center}.modelEssayTitle .icon{font-size:40px}.modelEssayTitle h2{font-size:20px;color:#76552b;margin:4px 0}.modelEssayTitle small{color:#a28b68}
+.modelText{font-size:15px;line-height:2;color:#493c29}.modelText p{margin:0 0 12px;text-indent:2em}.modelText p:last-child{margin-bottom:0}
+.modelPart{border-left:5px solid #d9a441}.modelPart.green{border-left-color:#77a960}.modelPart h3{color:#7a5a2a;font-size:16px;margin-bottom:8px}.modelPart .partIntro{font-size:12px;color:#9a8668;line-height:1.7;margin-bottom:10px}
+.logicStep{display:grid;grid-template-columns:30px 1fr;gap:8px;align-items:start;padding:9px 0;border-bottom:1px dashed #eadcc3}.logicStep:last-child{border:0}.logicStep i{display:grid;place-items:center;width:27px;height:27px;border-radius:50%;background:#f4dfad;color:#835e25;font-style:normal;font-weight:800}.logicStep span{font-size:13px;line-height:1.7;color:#5d4d35}
+.clozeFields{display:grid;gap:9px}.clozeField label{display:block;color:#80663e;font-size:11px;font-weight:800;margin:0 0 4px 3px}.clozeField input{width:100%;box-sizing:border-box;border:1.5px solid #dcc69f;border-radius:11px;background:#fff;padding:10px 11px;color:#4a3c28;font:inherit;font-size:14px;outline:none}.clozeField input:focus{border-color:#78a85f;box-shadow:0 0 0 3px rgba(120,168,95,.12)}
+.myEssayPreview{margin-top:12px;border-radius:14px;background:#f5faef;padding:12px;color:#4e633e;font-size:14px;line-height:1.9}.myEssayPreview p{margin:0 0 8px;text-indent:2em}.myEssayPreview .blank{display:inline-block;min-width:70px;border-bottom:2px solid #c69b4a;color:#a27627;text-indent:0;text-align:center}
+.modelActions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+@media(max-width:360px){.modelList{grid-template-columns:1fr}}
 
 /* ---- 结算 ---- */
 #scr-done { text-align: center; padding-top: 24px; }
@@ -433,6 +452,8 @@ body {
     <section id="scr-remix" class="screen"></section>
     <section id="scr-essay" class="screen"></section>
     <section id="scr-essayWrite" class="screen"></section>
+    <section id="scr-models" class="screen"></section>
+    <section id="scr-modelDetail" class="screen"></section>
     <section id="scr-done" class="screen"></section>
     <section id="scr-parent" class="screen"></section>
     <section id="scr-review" class="screen"></section>
@@ -456,6 +477,7 @@ body {
 
 <script src="audio/baibai/manifest.js"></script>
 <script src="data.js"></script>
+<script src="essay-library.js"></script>
 <script src="check.js"></script>
 <script src="app.js"></script>
 </body>
